@@ -27,6 +27,19 @@ public class VideoDao {
     private VideoDao() {
     }
 
+    public boolean getVideoById(long id) {
+        String sql = "SELECT COUNT(*) FROM videos WHERE video_id = ?";
+        int result = template.query(sql,
+                new ResultSetExtractor<Integer>() {
+                    @Override
+                    public Integer extractData(ResultSet resultSet) throws SQLException, DataAccessException {
+                        resultSet.next();
+                        return resultSet.getInt(1);
+                    }
+                }, id);
+       return result != 0;
+    }
+
     public void addVideo(Video toAdd) {
 
         String sql = "INSERT INTO videos (title, category, description, upload_date, duration, uploader_id)" +

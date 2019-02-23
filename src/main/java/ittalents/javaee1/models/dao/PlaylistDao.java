@@ -1,5 +1,6 @@
 package ittalents.javaee1.models.dao;
 
+import ittalents.javaee1.exceptions.PlaylistNotFoundException;
 import ittalents.javaee1.models.Playlist;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -87,9 +88,5 @@ public class PlaylistDao {
         });
     }
 
-    public class PlaylistNotFoundException extends Exception {
-        public PlaylistNotFoundException() {
-            super("Sorry, playlist not found!");
-        }
-    }
+
 }
