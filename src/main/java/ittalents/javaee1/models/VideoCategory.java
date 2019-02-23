@@ -1,4 +1,4 @@
-package ittalents.javaee1.model;
+package ittalents.javaee1.models;
 
 public enum VideoCategory {
 

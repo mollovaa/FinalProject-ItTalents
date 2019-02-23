@@ -1,7 +1,7 @@
-package ittalents.javaee1.controller;
+package ittalents.javaee1.controllers;
 
-import ittalents.javaee1.model.Playlist;
-import ittalents.javaee1.model.PlaylistDao;
+import ittalents.javaee1.models.Playlist;
+import ittalents.javaee1.models.dao.PlaylistDao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 

@@ -1,6 +1,7 @@
-package ittalents.javaee1.model;
+package ittalents.javaee1.models.dao;
 
 
+import ittalents.javaee1.models.Video;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;

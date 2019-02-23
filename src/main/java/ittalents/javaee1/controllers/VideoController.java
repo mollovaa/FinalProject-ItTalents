@@ -1,8 +1,8 @@
-package ittalents.javaee1.controller;
+package ittalents.javaee1.controllers;
 
-import ittalents.javaee1.model.Video;
+import ittalents.javaee1.models.Video;
 
-import ittalents.javaee1.model.VideoDao;
+import ittalents.javaee1.models.dao.VideoDao;
 
 import org.springframework.beans.factory.annotation.Autowired;
 
