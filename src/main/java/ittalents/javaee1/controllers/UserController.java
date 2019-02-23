@@ -31,6 +31,7 @@ public class UserController {
 	@PostMapping(value = "/login")
 	public Object loginUser(@RequestBody User user, HttpServletResponse response, HttpSession session) {
 		try {
+			validateLogin(user);
 			User userCheckUsername = userDao.getByUsername(user.getUsername());
 			if (userCheckUsername == null) {
 				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -45,6 +46,9 @@ public class UserController {
 					return WRONG_CREDENTIALS;
 				}
 			}
+		} catch (InvalidInputException e) {
+			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			return WRONG_CREDENTIALS;
 		} catch (Exception e) {
 			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 			return SERVER_ERROR;
@@ -54,7 +58,7 @@ public class UserController {
 	@PostMapping(value = "/register")
 	public Object registerUser(@RequestBody User user, HttpServletResponse response) {
 		try {
-			validateUser(user);
+			validateRegister(user);
 			User userCheckUsername = userDao.getByUsername(user.getUsername());
 			if (userCheckUsername == null) { // no such user with that username
 				User userCheckEmail = userDao.getByEmail(user.getEmail());
@@ -77,12 +81,19 @@ public class UserController {
 			return SERVER_ERROR;
 		}
 	}
-	
-	private void validateUser(User user) throws InvalidInputException {
+	private void validateLogin(User user)throws InvalidInputException {
 		String username = user.getUsername();
 		if (username == null || username.isEmpty()) {
 			throw new InvalidInputException(INVALID_USERNAME);
 		}
+		String password = user.getPassword();
+		if (password == null || password.isEmpty()) {
+			throw new InvalidInputException(INVALID_PASSWORD);
+		}
+	}
+	private void validateRegister(User user) throws InvalidInputException {
+		validateLogin(user);
+		
 		String email = user.getEmail();
 		if (email == null || email.isEmpty()) {
 			throw new InvalidInputException(INVALID_EMAIL);
@@ -94,10 +105,6 @@ public class UserController {
 		long age = user.getAge();
 		if (age <= 0 || age > 120) {
 			throw new InvalidInputException(INVALID_AGE);
-		}
-		String password = user.getPassword();
-		if (password == null || password.isEmpty()) {
-			throw new InvalidInputException(INVALID_PASSWORD);
 		}
 	}
 }
