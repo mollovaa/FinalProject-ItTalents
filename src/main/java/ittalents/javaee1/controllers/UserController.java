@@ -13,24 +13,43 @@ import javax.servlet.http.HttpSession;
 @RestController
 public class UserController {
 	
-	public static final String SUCCESSFUL_REGISTRATION = "{\"msg\" : \"You have successfully registered!\"}";
-	public static final String SUCCESSFUL_LOG_IN = "{\"msg\" : \"You have successfully logged in!\"}";
-	public static final String WRONG_CREDENTIALS = "{\"error\" : \"Invalid Username or Password\"}";
-	public static final String SERVER_ERROR = "{\"error\" : \"Please try again later!\"}";
-	public static final String EXISTING_EMAIL = "{\"error\" : \"Email already exists!\"}";
-	public static final String EXISTING_USERNAME = "{\"error\" : \"Username already exists!\"}";
-	public static final String INVALID_USERNAME = "{\"error\" : \"Invalid Username!\"}";
-	public static final String INVALID_FULL_NAME = "{\"error\" : \"Invalid Full name!\"}";
-	public static final String INVALID_EMAIL = "{\"error\" : \"Invalid Email!\"}";
-	public static final String INVALID_AGE = "{\"error\" : \"Invalid Age!\"}";
-	public static final String INVALID_PASSWORD = "{\"error\" : \"Invalid Password!\"}";
+	private static final String SUCCESSFUL_REGISTRATION = "{\"msg\" : \"You have successfully registered!\"}";
+	private static final String SUCCESSFUL_LOG_IN = "{\"msg\" : \"You have successfully logged in!\"}";
+	private static final String SUCCESSFUL_LOG_OUT = "{\"msg\" : \"You have successfully logged out!\"}";
+	private static final String WRONG_CREDENTIALS = "{\"error\" : \"Invalid Username or Password\"}";
+	private static final String SERVER_ERROR = "{\"error\" : \"Please try again later!\"}";
+	private static final String EXISTING_EMAIL = "{\"error\" : \"Email already exists!\"}";
+	private static final String EXISTING_USERNAME = "{\"error\" : \"Username already exists!\"}";
+	private static final String INVALID_USERNAME = "{\"error\" : \"Invalid Username!\"}";
+	private static final String INVALID_FULL_NAME = "{\"error\" : \"Invalid Full name!\"}";
+	private static final String INVALID_EMAIL = "{\"error\" : \"Invalid Email!\"}";
+	private static final String INVALID_AGE = "{\"error\" : \"Invalid Age!\"}";
+	private static final String INVALID_PASSWORD = "{\"error\" : \"Invalid Password!\"}";
+	private static final String NOT_LOGED_IN = "{\"error\" : \"You are not logged in.\"}";
+	private static final String ALREADY_LOGGED = "{\"error\" : \"You are already logged in.\"}";
+	
 	
 	@Autowired
 	private UserDao userDao;
 	
+	@GetMapping(value = "/logout")
+	public Object logout(HttpSession session, HttpServletResponse response) {
+		if (SessionManager.isLogged(session)) {
+			session.invalidate();
+			return SUCCESSFUL_LOG_OUT;
+		} else {
+			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			return NOT_LOGED_IN;
+		}
+	}
+	
 	@PostMapping(value = "/login")
 	public Object loginUser(@RequestBody User user, HttpServletResponse response, HttpSession session) {
 		try {
+			if (SessionManager.isLogged(session)) {
+				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+				return ALREADY_LOGGED;
+			}
 			validateLogin(user);
 			User userCheckUsername = userDao.getByUsername(user.getUsername());
 			if (userCheckUsername == null) {
@@ -38,8 +57,7 @@ public class UserController {
 				return WRONG_CREDENTIALS;
 			} else {
 				if (CryptWithMD5.cryptWithMD5(user.getPassword()).equals(userCheckUsername.getPassword())) {
-					session.setAttribute("logged", true);
-					session.setAttribute("user_id", userCheckUsername.getId());
+					SessionManager.logUser(session, userCheckUsername.getId());
 					return SUCCESSFUL_LOG_IN;
 				} else {
 					response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -81,7 +99,8 @@ public class UserController {
 			return SERVER_ERROR;
 		}
 	}
-	private void validateLogin(User user)throws InvalidInputException {
+	
+	private void validateLogin(User user) throws InvalidInputException {
 		String username = user.getUsername();
 		if (username == null || username.isEmpty()) {
 			throw new InvalidInputException(INVALID_USERNAME);
@@ -91,6 +110,7 @@ public class UserController {
 			throw new InvalidInputException(INVALID_PASSWORD);
 		}
 	}
+	
 	private void validateRegister(User user) throws InvalidInputException {
 		validateLogin(user);
 		
