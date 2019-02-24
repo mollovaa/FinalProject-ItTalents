@@ -12,12 +12,13 @@ import javax.servlet.http.HttpSession;
 
 @RestController
 public class UserController {
-	
+	public static final String SERVER_ERROR = "{\"error\" : \"Please try again later!\"}";
 	private static final String SUCCESSFUL_REGISTRATION = "{\"msg\" : \"You have successfully registered!\"}";
 	private static final String SUCCESSFUL_LOG_IN = "{\"msg\" : \"You have successfully logged in!\"}";
 	private static final String SUCCESSFUL_LOG_OUT = "{\"msg\" : \"You have successfully logged out!\"}";
+	private static final String SUBSCRIBED = "{\"msg\" : \"Subscribed!\"}";
+	private static final String UNSUBSCRIBED = "{\"msg\" : \"Unsubscribed!\"}";
 	private static final String WRONG_CREDENTIALS = "{\"error\" : \"Invalid Username or Password\"}";
-	private static final String SERVER_ERROR = "{\"error\" : \"Please try again later!\"}";
 	private static final String EXISTING_EMAIL = "{\"error\" : \"Email already exists!\"}";
 	private static final String EXISTING_USERNAME = "{\"error\" : \"Username already exists!\"}";
 	private static final String INVALID_USERNAME = "{\"error\" : \"Invalid Username!\"}";
@@ -26,7 +27,10 @@ public class UserController {
 	private static final String INVALID_AGE = "{\"error\" : \"Invalid Age!\"}";
 	private static final String INVALID_PASSWORD = "{\"error\" : \"Invalid Password!\"}";
 	private static final String NOT_LOGED_IN = "{\"error\" : \"You are not logged in.\"}";
+	private static final String NOT_SUBSCRIBED = "{\"error\" : \"You are not subscribed.\"}";
 	private static final String ALREADY_LOGGED = "{\"error\" : \"You are already logged in.\"}";
+	private static final String ALREADY_SUBSCRIBED = "{\"error\" : \"You are already subscribed.\"}";
+	private static final String INVALID_USER = "{\"error\" : \"Invalid user!\"}";
 	
 	
 	@Autowired
@@ -37,6 +41,60 @@ public class UserController {
 		if (SessionManager.isLogged(session)) {
 			session.invalidate();
 			return SUCCESSFUL_LOG_OUT;
+		} else {
+			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			return NOT_LOGED_IN;
+		}
+	}
+	
+	@GetMapping(value = "/unsubscribe/{id}")
+	public Object unsubscribeTo(HttpServletResponse response, HttpSession session, @PathVariable("id") long id) {
+		if (SessionManager.isLogged(session)) {
+			try {
+				if (userDao.getById(id) != null) {  // user we are subscribing to exists
+					if (userDao.isSubscribed(SessionManager.getLoggedUserId(session), id)) {
+						userDao.removeSubscription(SessionManager.getLoggedUserId(session), id);
+						return UNSUBSCRIBED;
+					} else { // //not subbed
+						throw new InvalidInputException(NOT_SUBSCRIBED);
+					}
+				} else {
+					throw new InvalidInputException(INVALID_USER);
+				}
+			} catch (SessionManager.ExpiredSessionException | InvalidInputException e) {
+				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+				return e.getMessage();
+			} catch (Exception e) {
+				response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+				return SERVER_ERROR;
+			}
+		} else {
+			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			return NOT_LOGED_IN;
+		}
+	}
+	
+	@GetMapping(value = "/subscribe/{id}")
+	public Object subscribeTo(HttpServletResponse response, HttpSession session, @PathVariable("id") long id) {
+		if (SessionManager.isLogged(session)) {
+			try {
+				if (userDao.getById(id) != null) {  // user we are subscribing to exists
+					if (userDao.isSubscribed(SessionManager.getLoggedUserId(session), id)) { // already subbed
+						throw new InvalidInputException(ALREADY_SUBSCRIBED);
+					} else { // add subscribtion
+						userDao.addSubscription(SessionManager.getLoggedUserId(session), id);
+						return SUBSCRIBED;
+					}
+				} else {
+					throw new InvalidInputException(INVALID_USER);
+				}
+			} catch (SessionManager.ExpiredSessionException | InvalidInputException e) {
+				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+				return e.getMessage();
+			} catch (Exception e) {
+				response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+				return SERVER_ERROR;
+			}
 		} else {
 			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
 			return NOT_LOGED_IN;
