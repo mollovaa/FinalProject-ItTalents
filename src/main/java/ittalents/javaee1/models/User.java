@@ -1,7 +1,10 @@
 package ittalents.javaee1.models;
 
 
-public class User {
+import ittalents.javaee1.models.search.SearchType;
+import ittalents.javaee1.models.search.Searchable;
+
+public class User implements Searchable {
 	private long id;
 	private int age;
 	private String full_name;
@@ -15,6 +18,11 @@ public class User {
 		this.username = username;
 		this.password = password;
 		this.email = email;
+	}
+	
+	public User(long id, String full_name) {
+		this.id = id;
+		this.full_name = full_name;
 	}
 	
 	public void setId(long id) {
@@ -43,5 +51,10 @@ public class User {
 	
 	public String getEmail() {
 		return email;
+	}
+	
+	@Override
+	public SearchType getType() {
+		return SearchType.USER;
 	}
 }

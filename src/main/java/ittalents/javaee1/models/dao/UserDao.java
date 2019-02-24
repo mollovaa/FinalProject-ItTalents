@@ -15,6 +15,8 @@ import java.util.List;
 public class UserDao {
 	private static final String ADD_USER_QUERY =
 			"INSERT  INTO users (full_name,username,password,email,age) VALUES (?,?,?,?,?)";
+	private static final String GET_USER_QUERY_BY_FULL_NAME =
+			"SELECT user_id,full_name FROM users WHERE full_name LIKE ?";
 	private static final String GET_USER_QUERY_BY_USERNAME =
 			"SELECT user_id,full_name,username,password,email,age FROM users WHERE username = ?";
 	private static final String GET_USER_QUERY_BY_EMAIL =
@@ -79,7 +81,7 @@ public class UserDao {
 		}
 	}
 	
-	public User getById(long id) { // return user that matches username in DB
+	public User getById(long id) {
 		List<User> userList = jdbcTemplate.query(GET_USER_QUERY_BY_ID, userRowMapper, id);
 		if (userList.isEmpty()) {
 			return null;
@@ -88,13 +90,19 @@ public class UserDao {
 		}
 	}
 	
-	public User getByEmail(String email) { // return user that matches username in DB
+	public User getByEmail(String email) {
 		List<User> userList = jdbcTemplate.query(GET_USER_QUERY_BY_EMAIL, userRowMapper, email);
 		if (userList.isEmpty()) {
 			return null;
 		} else {
 			return userList.get(0);
 		}
+	}
+	
+	public List<User> getByFullNameLike(String full_name) { // return user that matches username in DB
+		return jdbcTemplate.query(GET_USER_QUERY_BY_FULL_NAME, searchUserRowMapper,
+				"%" + full_name + "%");
+		
 	}
 	
 	private RowMapper<User> userRowMapper = (resultSet, i) -> {
@@ -106,6 +114,12 @@ public class UserDao {
 		int age = resultSet.getInt("age");
 		User user = new User(age, fullName, username, password, email);
 		user.setId(id);
+		return user;
+	};
+	private RowMapper<User> searchUserRowMapper = (resultSet, i) -> {
+		long id = resultSet.getInt("user_id");
+		String fullName = resultSet.getString("full_name");
+		User user = new User(id, fullName);
 		return user;
 	};
 }
