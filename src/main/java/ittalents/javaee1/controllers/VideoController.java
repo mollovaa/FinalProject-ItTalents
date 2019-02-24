@@ -15,6 +15,7 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.time.LocalDate;
 
+import static ittalents.javaee1.controllers.PlaylistController.redirectingToLogin;
 import static ittalents.javaee1.controllers.ResponseMessages.*;
 
 @RestController
@@ -53,13 +54,7 @@ public class VideoController {
                     return e.getMessage();
                 }
             } else {
-                try {
-                    response.sendRedirect("/login");
-                    return EXPIRED_SESSION;
-                } catch (IOException e) {
-                    response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                    return SERVER_ERROR;
-                }
+                return redirectingToLogin(response);
             }
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -68,14 +63,14 @@ public class VideoController {
         }
     }
 
-    @PostMapping(value = "/removeVideo")
-    public Object removeVideo(@RequestBody Video toRemove, HttpSession session, HttpServletResponse response) {
+    @GetMapping(value = "/removeVideo/{videoId}")
+    public Object removeVideo(@PathVariable long videoId, HttpSession session, HttpServletResponse response) {
         try {
-            if (videoDao.checkIfVideoExists(toRemove.getVideoId())) {
+            if (videoDao.checkIfVideoExists(videoId)) {
                 if (SessionManager.isLogged(session)) {
                     try {
-                        if (SessionManager.getLoggedUserId(session) == toRemove.getUploaderId()) {
-                            videoDao.removeVideo(toRemove);
+                        if (SessionManager.getLoggedUserId(session) == videoDao.getVideoById(videoId).getUploaderId()) {
+                            videoDao.removeVideo(videoId);
                             return SUCCESSFULLY_REMOVED_VIDEO;
                         } else {
                             return ACCESS_DENIED;
@@ -85,18 +80,14 @@ public class VideoController {
                         return EXPIRED_SESSION;
                     }
                 } else {
-                    try {
-                        response.sendRedirect("/login");
-                    } catch (IOException e) {
-                        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                        return SERVER_ERROR;
-                    }
+                    return redirectingToLogin(response);
                 }
             }
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             return NOT_FOUND;
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            e.printStackTrace();
             return SERVER_ERROR;
         }
     }
@@ -113,13 +104,14 @@ public class VideoController {
         }
     }
 
-    @PostMapping(value = "/likeVideo")
-    public Object likeVideo(@RequestBody Video toLike, HttpSession session, HttpServletResponse response) {
+    @GetMapping(value = "/likeVideo/{videoId}")
+    public Object likeVideo(@PathVariable long videoId, HttpSession session, HttpServletResponse response) {
         try {
-            if (videoDao.checkIfVideoExists(toLike.getVideoId())) {
+            if (videoDao.checkIfVideoExists(videoId)) {
+                // System.out.println(videoDao.checkIfVideoExists(videoId));  //
                 if (SessionManager.isLogged(session)) {
                     try {
-                        if (!videoDao.likeVideo(toLike, SessionManager.getLoggedUserId(session))) {
+                        if (!videoDao.likeVideo(videoId, SessionManager.getLoggedUserId(session))) {
                             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                             return ALREADY_LIKED_VIDEO;
                         }
@@ -129,29 +121,26 @@ public class VideoController {
                     }
                     return SUCCESSFULLY_LIKED_VIDEO;
                 } else {
-                    try {
-                        response.sendRedirect("/login");
-                    } catch (IOException e) {
-                        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                        return SERVER_ERROR;
-                    }
+                    return redirectingToLogin(response);
                 }
             }
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             return NOT_FOUND;
         } catch (Exception e) {
+            System.out.println(e.getMessage());
+            e.printStackTrace();
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             return SERVER_ERROR;
         }
     }
 
-    @PostMapping(value = "/dislikeVideo")
-    public Object dislikeVideo(@RequestBody Video toDislike, HttpSession session, HttpServletResponse response) {
+    @GetMapping(value = "/dislikeVideo/{videoId}")
+    public Object dislikeVideo(@PathVariable long videoId, HttpSession session, HttpServletResponse response) {
         try {
-            if (videoDao.checkIfVideoExists(toDislike.getVideoId())) {
+            if (videoDao.checkIfVideoExists(videoId)) {
                 if (SessionManager.isLogged(session)) {
                     try {
-                        if (!videoDao.dislikeVideo(toDislike, SessionManager.getLoggedUserId(session))) {
+                        if (!videoDao.dislikeVideo(videoId, SessionManager.getLoggedUserId(session))) {
                             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                             return ALREADY_DISLIKED_VIDEO;
                         }
@@ -160,12 +149,8 @@ public class VideoController {
                         return EXPIRED_SESSION;
                     }
                     return SUCCESSFULLY_DISLIKED_VIDEO;
-                }
-                try {
-                    response.sendRedirect("/login");
-                } catch (IOException e) {
-                    response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                    return SERVER_ERROR;
+                } else {
+                    return redirectingToLogin(response);
                 }
             }
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);

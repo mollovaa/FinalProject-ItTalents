@@ -3,6 +3,7 @@ package ittalents.javaee1.models;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 import java.time.LocalDate;
 
@@ -10,6 +11,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Getter
 @Setter
+@ToString
 public class Comment {
 
     private long id;
@@ -18,6 +20,6 @@ public class Comment {
     private int numberOfLikes;
     private int numberOfDislikes;
     private long publisherId;
-    private long responseId;
+    private long responseToId;
     private long videoId;
 }

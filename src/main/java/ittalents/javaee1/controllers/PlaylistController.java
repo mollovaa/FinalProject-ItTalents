@@ -48,6 +48,16 @@ public class PlaylistController {
         }
     }
 
+    public static Object redirectingToLogin(HttpServletResponse response) {
+        try {
+            response.sendRedirect("/login");
+            return EXPIRED_SESSION;
+        } catch (IOException e) {
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            return SERVER_ERROR;
+        }
+    }
+
     @PostMapping(value = "/createPlaylist")
     public Object addPlaylist(@RequestBody Playlist toAdd, HttpSession session, HttpServletResponse response) {
         try {
@@ -61,29 +71,22 @@ public class PlaylistController {
                     return EXPIRED_SESSION;
                 }
             } else {
-                try {
-                    response.sendRedirect("/login");
-                } catch (IOException e) {
-                    response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                    return SERVER_ERROR;
-                }
+                return redirectingToLogin(response);
             }
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             return SERVER_ERROR;
         }
-        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        return SERVER_ERROR;
     }
 
-    @PostMapping(value = "/removePlaylist")  //ako v bodyto ownera e greshen-trie
-    public Object removePlaylist(@RequestBody Playlist toRemove, HttpSession session, HttpServletResponse response) {
+    @GetMapping(value = "/removePlaylist/{playlistId}")
+    public Object removePlaylist(@PathVariable long playlistId, HttpSession session, HttpServletResponse response) {
         try {
-            if (playlistDao.checkIfPlaylistExists(toRemove.getId())) {
+            if (playlistDao.checkIfPlaylistExists(playlistId)) {
                 if (SessionManager.isLogged(session)) {
                     try {
-                        if (SessionManager.getLoggedUserId(session) == toRemove.getOwnerId()) {
-                            playlistDao.removePlaylist(toRemove);
+                        if (SessionManager.getLoggedUserId(session) == playlistDao.getPlaylistById(playlistId).getOwnerId()) {
+                            playlistDao.removePlaylist(playlistId);
                             return SUCCESSFULLY_REMOVED_PLAYLIST;
                         } else {
                             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -92,14 +95,12 @@ public class PlaylistController {
                     } catch (SessionManager.ExpiredSessionException e) {
                         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                         return EXPIRED_SESSION;
+                    } catch (PlaylistNotFoundException e) {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        return NOT_FOUND;
                     }
                 } else {
-                    try {
-                        response.sendRedirect("/login");
-                    } catch (IOException e) {
-                        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                        return SERVER_ERROR;
-                    }
+                    return redirectingToLogin(response);
                 }
             } else {
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -109,8 +110,6 @@ public class PlaylistController {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             return SERVER_ERROR;
         }
-        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        return SERVER_ERROR;
     }
 
     @GetMapping(value = "addVideoToPlaylist/{playlistId}/{videoId}")
@@ -121,6 +120,10 @@ public class PlaylistController {
                 if (SessionManager.isLogged(session)) {
                     try {
                         if (playlistDao.getPlaylistById(playlistId).getOwnerId() == SessionManager.getLoggedUserId(session)) {
+                            if (playlistDao.isVideoAddedToPlaylist(playlistId, videoId)) {
+                                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                                return VIDEO_ALREADY_ADDED_TO_PLAYLIST;
+                            }
                             playlistDao.addVideoToPlaylist(playlistId, videoId);
                             return SUCCESSFULLY_ADDED_VIDEO_TO_PLAYLIST;
                         } else {
@@ -132,12 +135,7 @@ public class PlaylistController {
                         return EXPIRED_SESSION;
                     }
                 } else {
-                    try {
-                        response.sendRedirect("/login");
-                    } catch (IOException e) {
-                        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                        return SERVER_ERROR;
-                    }
+                    return redirectingToLogin(response);
                 }
             } else {
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -147,10 +145,43 @@ public class PlaylistController {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             return SERVER_ERROR;
         }
-        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        return SERVER_ERROR;
+
     }
 
-    //todo remove video from playlist
+    @GetMapping(value = "removeVideoFromPlaylist/{playlistId}/{videoId}")
+    public Object removeVideoFromPlaylist(@PathVariable long playlistId, @PathVariable long videoId,
+                                          HttpSession session, HttpServletResponse response) {
+        try {
+            if (playlistDao.checkIfPlaylistExists(playlistId) && videoDao.checkIfVideoExists(videoId)) {
+                if (SessionManager.isLogged(session)) {
+                    try {
+                        if (playlistDao.getPlaylistById(playlistId).getOwnerId() == SessionManager.getLoggedUserId(session)) {
+                            if (!playlistDao.isVideoAddedToPlaylist(playlistId, videoId)) {
+                                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                                return VIDEO_NOT_IN_PLAYLIST;
+                            }
+                            playlistDao.removeVideoFromPlaylist(playlistId, videoId);
+                            return SUCCESSFULLY_REMOVED_VIDEO_FROM_PLAYLIST;
+                        } else {
+                            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                            return ACCESS_DENIED;
+                        }
+                    } catch (SessionManager.ExpiredSessionException e) {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        return EXPIRED_SESSION;
+                    }
+                } else {
+                    return redirectingToLogin(response);
+                }
+            } else {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                return NOT_FOUND;
+            }
+        } catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            return SERVER_ERROR;
+        }
+    }
+
 
 }
