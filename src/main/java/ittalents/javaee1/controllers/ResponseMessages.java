@@ -10,11 +10,16 @@ class ResponseMessages {
     static final String SUCCESSFULLY_REMOVED_VIDEO = "{\"msg\" : \"You have successfully removed a video!\"}";
     static final String SUCCESSFULLY_COMMENTED_VIDEO = "{\"msg\" : \"You have successfully commented a video!\"}";
     static final String SUCCESSFULLY_LIKED_VIDEO = "{\"msg\" : \"You have successfully liked a video!\"}";
+    static final String SUCCESSFULLY_LIKED_COMMENT = "{\"msg\" : \"You have successfully liked a comment!\"}";
     static final String SUCCESSFULLY_DISLIKED_VIDEO = "{\"msg\" : \"You have successfully disliked a video!\"}";
+    static final String SUCCESSFULLY_DISLIKED_COMMENT = "{\"msg\" : \"You have successfully disliked a comment!\"}";
+    static final String SUCCESSFULLY_REMOVED_COMMENT = "{\"msg\" : \"You have successfully removed a comment!\"}";
     static final String ALREADY_LIKED_VIDEO = "{\"error\" : \"You have already liked this video!\"}";
+    static final String ALREADY_LIKED_COMMENT = "{\"error\" : \"You have already liked this comment!\"}";
     static final String VIDEO_ALREADY_ADDED_TO_PLAYLIST = "{\"error\" : \"You have already added this video " +
             "to playlist!\"}";
     static final String ALREADY_DISLIKED_VIDEO = "{\"error\" : \"You have already disliked this video!\"}";
+    static final String ALREADY_DISLIKED_COMMENT = "{\"error\" : \"You have already disliked this comment!\"}";
     static final String SERVER_ERROR = "{\"error\" : \"Please try again later!\"}";
     static final String EXPIRED_SESSION = "{\"error\" : \"Please login to continue!\"}";
     static final String ACCESS_DENIED = "{\"error\" : \"Permitted operation\"}";

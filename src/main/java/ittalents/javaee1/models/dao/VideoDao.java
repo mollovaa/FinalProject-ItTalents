@@ -30,6 +30,8 @@ public class VideoDao {
 
     @Autowired
     private GlobalDao globalDao;
+    @Autowired
+    private CommentDao commentDao;
 
     public VideoDao() {
     }
@@ -79,14 +81,14 @@ public class VideoDao {
         return videos;
     }
 
-    public List<Video> getVideoByTitleWithDurationSmallerThan(String title, int duration) {
+    public List<Video> getVideoByTitleWithDurationSmallerThan(String title, int duration) { //in seconds
         String sql = "SELECT video_id, title, category, description, upload_date, duration, number_of_likes, " +
                 "number_of_dislikes, views, uploader_id FROM videos WHERE title like ? AND duration <= ?";
         List<Video> videos = template.query(sql, videoRowMapper, "%" + title + "%", duration);
         return videos;
     }
 
-    public List<Video> getVideoByTitleWithDurationBiggerThan(String title, int duration) {
+    public List<Video> getVideoByTitleWithDurationBiggerThan(String title, int duration) { //in seconds
         String sql = "SELECT video_id, title, category, description, upload_date, duration, number_of_likes, " +
                 "number_of_dislikes, views, uploader_id FROM videos WHERE title like ? AND duration >= ?";
         List<Video> videos = template.query(sql, videoRowMapper, "%" + title + "%", duration);
@@ -127,13 +129,21 @@ public class VideoDao {
         globalDao.deleteRowFromManyToMany(videoId, template, sql);
     }
 
+    private void deleteCommentsOnVideo(long videoId) {
+        String sql = "SELECT comment_id FROM comments WHERE video_id = ?";
+        List<Integer> commentsIds = template.queryForList(sql, new Object[]{videoId}, Integer.class);
+        for (Integer id : commentsIds) {
+            commentDao.removeComment(id);
+        }
+    }
+
     @Transactional
     public void removeVideo(long videoId) {
         String sql = "DELETE FROM videos WHERE video_id = ?";
         template.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setLong(1, videoId);
-            //todo delete all comments and responses -> delete liked/disliked comments
+            this.deleteCommentsOnVideo(videoId);
             this.deleteVideoFromPlaylists(videoId);
             this.deleteVideoFromDisliked(videoId);
             this.deleteVideoFromLiked(videoId);
