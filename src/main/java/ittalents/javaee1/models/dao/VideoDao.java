@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
@@ -42,7 +43,6 @@ public class VideoDao {
     public Video getVideoById(long videoId) throws VideoNotFoundException {
         String sql = "SELECT video_id, title, category, description, upload_date, duration, number_of_likes, " +
                 "number_of_dislikes, views, uploader_id FROM videos WHERE video_id = ?";
-
         Video result = template.query(sql, rs -> {
             rs.next();
             return new Video(rs.getLong(1), rs.getString(2),
@@ -62,28 +62,34 @@ public class VideoDao {
         String sql = "SELECT video_id, title, category, description, upload_date, duration, number_of_likes, " +
                 "number_of_dislikes, views, uploader_id FROM videos WHERE title like ?";
 
-        List<Video> videos = template.query(sql, (rs, i) -> {
-            Video video = new Video(rs.getLong(1), rs.getString(2),
-                    VideoCategory.valueOf(rs.getString(3)), rs.getString(4),
-                    rs.getDate(5).toLocalDate(), Duration.ofSeconds(rs.getLong(6)),
-                    rs.getInt(7), rs.getInt(8), rs.getInt(9),
-                    rs.getLong(10));
-            return video;
-        }, "%" + title + "%");
+        List<Video> videos = template.query(sql, videoRowMapper, "%" + title + "%");
         return videos;
     }
+
+    private RowMapper<Video> videoRowMapper = (rs, i) -> new Video(rs.getLong(1), rs.getString(2),
+            VideoCategory.valueOf(rs.getString(3)), rs.getString(4),
+            rs.getDate(5).toLocalDate(), Duration.ofSeconds(rs.getLong(6)),
+            rs.getInt(7), rs.getInt(8), rs.getInt(9),
+            rs.getLong(10));
 
     public List<Video> getVideoByTitleOrderBy(String title, String order) {
         String sql = "SELECT video_id, title, category, description, upload_date, duration, number_of_likes, " +
                 "number_of_dislikes, views, uploader_id FROM videos WHERE title like ? ORDER BY ? DESC";
-        List<Video> videos = template.query(sql, (rs, i) -> {
-            Video video = new Video(rs.getLong(1), rs.getString(2),
-                    VideoCategory.valueOf(rs.getString(3)), rs.getString(4),
-                    rs.getDate(5).toLocalDate(), Duration.ofSeconds(rs.getLong(6)),
-                    rs.getInt(7), rs.getInt(8), rs.getInt(9),
-                    rs.getLong(10));
-            return video;
-        }, "%" + title + "%", order);
+        List<Video> videos = template.query(sql, videoRowMapper, "%" + title + "%", order);
+        return videos;
+    }
+
+    public List<Video> getVideoByTitleWithDurationSmallerThan(String title, int duration) {
+        String sql = "SELECT video_id, title, category, description, upload_date, duration, number_of_likes, " +
+                "number_of_dislikes, views, uploader_id FROM videos WHERE title like ? AND duration <= ?";
+        List<Video> videos = template.query(sql, videoRowMapper, "%" + title + "%", duration);
+        return videos;
+    }
+
+    public List<Video> getVideoByTitleWithDurationBiggerThan(String title, int duration) {
+        String sql = "SELECT video_id, title, category, description, upload_date, duration, number_of_likes, " +
+                "number_of_dislikes, views, uploader_id FROM videos WHERE title like ? AND duration >= ?";
+        List<Video> videos = template.query(sql, videoRowMapper, "%" + title + "%", duration);
         return videos;
     }
 
