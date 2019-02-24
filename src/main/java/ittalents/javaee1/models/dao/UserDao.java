@@ -19,10 +19,41 @@ public class UserDao {
 			"SELECT user_id,full_name,username,password,email,age FROM users WHERE username = ?";
 	private static final String GET_USER_QUERY_BY_EMAIL =
 			"SELECT user_id,full_name,username,password,email,age FROM users WHERE email = ?";
+	private static final String GET_USER_QUERY_BY_ID =
+			"SELECT user_id,full_name,username,password,email,age FROM users WHERE user_id = ?";
+	private static final String INSERT_INTO_SUBSCRIPTIONS =
+			"INSERT INTO subscriptions (subcriber_id,subscribedTo_id) VALUES (?,?)";
+	public static final String DELETE_FROM_SUBSCRIPTIONS =
+			"DELETE FROM subscriptions WHERE subcriber_id = ? AND subscribedTo_id = ?";
+	
 	
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
 	
+	public static void manyXmanyUpdate(String query, JdbcTemplate template, long fromId, long toId) {
+		template.update(connection -> {
+			PreparedStatement ps = connection.prepareStatement(query);
+			ps.setLong(1, fromId);
+			ps.setLong(2, toId);
+			return ps;
+		});
+	}
+	
+	public void addSubscription(long fromId, long toId) {
+		manyXmanyUpdate(INSERT_INTO_SUBSCRIPTIONS, jdbcTemplate, fromId, toId);
+	}
+	
+	public void removeSubscription(long fromId, long toId) {
+		manyXmanyUpdate(DELETE_FROM_SUBSCRIPTIONS, jdbcTemplate, fromId, toId);
+	}
+	
+	public boolean isSubscribed(long id, long toId) {
+		Integer isSubed = jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM subscriptions WHERE subcriber_id = ? AND subscribedTo_id = ?",
+				new Object[]{id, toId},
+				Integer.class);
+		return isSubed == 1;
+	}
 	
 	public void addUser(User user) { // includes user and setting him the generated id from DB
 		KeyHolder keyHolder = new GeneratedKeyHolder();
@@ -41,6 +72,15 @@ public class UserDao {
 	
 	public User getByUsername(String username) { // return user that matches username in DB
 		List<User> userList = jdbcTemplate.query(GET_USER_QUERY_BY_USERNAME, userRowMapper, username);
+		if (userList.isEmpty()) {
+			return null;
+		} else {
+			return userList.get(0);
+		}
+	}
+	
+	public User getById(long id) { // return user that matches username in DB
+		List<User> userList = jdbcTemplate.query(GET_USER_QUERY_BY_ID, userRowMapper, id);
 		if (userList.isEmpty()) {
 			return null;
 		} else {
