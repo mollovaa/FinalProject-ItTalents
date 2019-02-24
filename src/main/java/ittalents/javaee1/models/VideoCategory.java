@@ -1,7 +1,16 @@
 package ittalents.javaee1.models;
 
-public enum VideoCategory {
+import java.util.Arrays;
 
-    MOVIES_AND_ANIMATIONS, CARS_AND_VEHICLES, MUSIC, PETS_AND_ANIMALS, SPORT, JOURNEYS_AND_EVENTS,
-    GAMES, COMEDY, PEOPLE_AND_BLOGS, ENTERTAINMENTS, NEWS_AND_POLITICS, EDUCATION, SCIENCE_AND_TECHNOLOGIES
+
+public enum VideoCategory {
+    CARS_AND_VEHICLES, COMEDY, EDUCATION, ENTERTAINMENTS, GAMES, JOURNEYS_AND_EVENTS,
+    MOVIES_AND_ANIMATIONS, MUSIC, NEWS_AND_POLITICS, PEOPLE_AND_BLOGS, PETS_AND_ANIMALS, SCIENCE_AND_TECHNOLOGIES,
+    SPORT;
+
+
+
+    public static boolean contains(VideoCategory category) {
+        return Arrays.asList(values()).contains(category);
+    }
 }

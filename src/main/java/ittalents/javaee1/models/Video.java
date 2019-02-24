@@ -24,9 +24,4 @@ public class Video {
     private long numberOfViews;
     private long uploaderId;
 
-    public Video(long videoId, String title, String description) {
-        this.videoId = videoId;
-        this.title = title;
-        this.description = description;
-    }
 }
