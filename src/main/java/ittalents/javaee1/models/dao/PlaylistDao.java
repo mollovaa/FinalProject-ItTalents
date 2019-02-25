@@ -8,6 +8,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.sql.*;
 import java.util.List;
 
@@ -44,9 +45,8 @@ public class PlaylistDao {
     public Playlist getPlaylistById(long id) throws PlaylistNotFoundException {
         String sql = "SELECT playlist_id, playlist_name, owner_id FROM playlists WHERE playlist_id = ?";
         Playlist result = template.query(sql, resultSet -> {
-            resultSet.next();
-            return new Playlist(resultSet.getLong(1), resultSet.getString(2),
-                    resultSet.getLong(3));
+            return resultSet.next() ? new Playlist(resultSet.getLong(1), resultSet.getString(2),
+                    resultSet.getLong(3)) : null;
         }, id);
         if (result != null) {
             return result;

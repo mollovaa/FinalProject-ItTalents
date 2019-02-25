@@ -3,7 +3,11 @@ package ittalents.javaee1.models;
 
 import ittalents.javaee1.models.search.SearchType;
 import ittalents.javaee1.models.search.Searchable;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+
+@NoArgsConstructor
 public class User implements Searchable {
 	private long id;
 	private int age;

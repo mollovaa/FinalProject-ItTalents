@@ -14,7 +14,11 @@ public class Playlist implements Searchable {
     private long id;
     private String name;
     private long ownerId;
-    
+
+    public Playlist(String name) {
+        this.name = name;
+    }
+
     @Override
     public SearchType getType() {
         return SearchType.PLAYLIST;

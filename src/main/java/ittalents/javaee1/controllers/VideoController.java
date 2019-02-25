@@ -1,6 +1,7 @@
 package ittalents.javaee1.controllers;
 
 import ittalents.javaee1.exceptions.InvalidInputException;
+import ittalents.javaee1.exceptions.BadRequestException;
 import ittalents.javaee1.models.Video;
 
 import ittalents.javaee1.models.VideoCategory;
@@ -12,14 +13,12 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import java.io.IOException;
 import java.time.LocalDate;
 
-import static ittalents.javaee1.controllers.PlaylistController.redirectingToLogin;
 import static ittalents.javaee1.controllers.ResponseMessages.*;
 
 @RestController
-public class VideoController {
+public class VideoController implements GlobalController {
 
     @Autowired
     VideoDao videoDao;
@@ -40,55 +39,30 @@ public class VideoController {
         video.setNumberOfViews(0);
     }
 
-    @PostMapping(value = "/addVideo")
-    public Object addVideo(@RequestBody Video toAdd, HttpSession session, HttpServletResponse response) {
-        try {
-            if (SessionManager.isLogged(session)) {
-                try {
-                    this.validateVideo(toAdd);
-                    toAdd.setUploaderId(SessionManager.getLoggedUserId(session));
-                    videoDao.addVideo(toAdd);
-                    return SUCCESSFULLY_ADDED_VIDEO;
-                } catch (SessionManager.ExpiredSessionException | InvalidInputException e) {
-                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                    return e.getMessage();
-                }
-            } else {
-                return redirectingToLogin(response);
-            }
-        } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            System.out.println(e.getMessage());
-            return SERVER_ERROR;
+    @PostMapping(value = "videos/addVideo")
+    public Object addVideo(@RequestBody Video toAdd, HttpSession session, HttpServletResponse response)
+            throws BadRequestException {
+        if (SessionManager.isLogged(session)) {
+            this.validateVideo(toAdd);
+            toAdd.setUploaderId(SessionManager.getLoggedUserId(session));
+            videoDao.addVideo(toAdd);
+            return toAdd;
+        } else {
+            return redirectingToLogin(response);
         }
     }
 
-    @GetMapping(value = "/removeVideo/{videoId}")
-    public Object removeVideo(@PathVariable long videoId, HttpSession session, HttpServletResponse response) {
-        try {
-            if (videoDao.checkIfVideoExists(videoId)) {
-                if (SessionManager.isLogged(session)) {
-                    try {
-                        if (SessionManager.getLoggedUserId(session) == videoDao.getVideoById(videoId).getUploaderId()) {
-                            videoDao.removeVideo(videoId);
-                            return SUCCESSFULLY_REMOVED_VIDEO;
-                        } else {
-                            return ACCESS_DENIED;
-                        }
-                    } catch (SessionManager.ExpiredSessionException e) {
-                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                        return EXPIRED_SESSION;
-                    }
-                } else {
-                    return redirectingToLogin(response);
-                }
+    @GetMapping(value = "videos/removeVideo/{videoId}")
+    public Object removeVideo(@PathVariable long videoId, HttpSession session, HttpServletResponse response) throws BadRequestException {
+        if (!SessionManager.isLogged(session)) {
+            return redirectingToLogin(response);
+        } else {
+            if (SessionManager.getLoggedUserId(session) == videoDao.getVideoById(videoId).getUploaderId()) {
+                videoDao.removeVideo(videoId);
+                return SUCCESSFULLY_REMOVED_VIDEO;
+            } else {
+                return responseForBadRequest(response, ACCESS_DENIED);
             }
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            return NOT_FOUND;
-        } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            e.printStackTrace();
-            return SERVER_ERROR;
         }
     }
 
@@ -104,61 +78,38 @@ public class VideoController {
         }
     }
 
-    @GetMapping(value = "/likeVideo/{videoId}")
-    public Object likeVideo(@PathVariable long videoId, HttpSession session, HttpServletResponse response) {
-        try {
-            if (videoDao.checkIfVideoExists(videoId)) {
-                // System.out.println(videoDao.checkIfVideoExists(videoId));  //
-                if (SessionManager.isLogged(session)) {
-                    try {
-                        if (!videoDao.likeVideo(videoId, SessionManager.getLoggedUserId(session))) {
-                            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                            return ALREADY_LIKED_VIDEO;
-                        }
-                    } catch (SessionManager.ExpiredSessionException e) {
-                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                        return EXPIRED_SESSION;
-                    }
-                    return SUCCESSFULLY_LIKED_VIDEO;
-                } else {
-                    return redirectingToLogin(response);
+
+    @GetMapping(value = "videos/likeVideo/{videoId}")
+    public Object likeVideo(@PathVariable long videoId, HttpSession session, HttpServletResponse response) throws BadRequestException {
+        if (!videoDao.checkIfVideoExists(videoId)) {
+            return responseForBadRequest(response, NOT_FOUND);
+        } else {
+            if (!SessionManager.isLogged(session)) {
+                return redirectingToLogin(response);
+            } else {
+                if (!videoDao.likeVideo(videoId, SessionManager.getLoggedUserId(session))) {
+                    return responseForBadRequest(response, ALREADY_LIKED_VIDEO);
                 }
+                return SUCCESSFULLY_LIKED_VIDEO;
             }
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            return NOT_FOUND;
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-            e.printStackTrace();
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            return SERVER_ERROR;
         }
     }
 
-    @GetMapping(value = "/dislikeVideo/{videoId}")
-    public Object dislikeVideo(@PathVariable long videoId, HttpSession session, HttpServletResponse response) {
-        try {
-            if (videoDao.checkIfVideoExists(videoId)) {
-                if (SessionManager.isLogged(session)) {
-                    try {
-                        if (!videoDao.dislikeVideo(videoId, SessionManager.getLoggedUserId(session))) {
-                            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                            return ALREADY_DISLIKED_VIDEO;
-                        }
-                    } catch (SessionManager.ExpiredSessionException e) {
-                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                        return EXPIRED_SESSION;
-                    }
-                    return SUCCESSFULLY_DISLIKED_VIDEO;
-                } else {
-                    return redirectingToLogin(response);
+    @GetMapping(value = "videos/dislikeVideo/{videoId}")
+    public Object dislikeVideo(@PathVariable long videoId, HttpSession session, HttpServletResponse response) throws SessionManager.ExpiredSessionException {
+git         if (!videoDao.checkIfVideoExists(videoId)) {
+            return responseForBadRequest(response, NOT_FOUND);
+        } else {
+            if (!SessionManager.isLogged(session)) {
+                return redirectingToLogin(response);
+            } else {
+                if (!videoDao.dislikeVideo(videoId, SessionManager.getLoggedUserId(session))) {
+                    return responseForBadRequest(response, ALREADY_DISLIKED_VIDEO);
                 }
+                return SUCCESSFULLY_DISLIKED_VIDEO;
             }
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            return NOT_FOUND;
-        } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            return SERVER_ERROR;
         }
+
     }
 
 }

@@ -1,11 +1,13 @@
 package ittalents.javaee1.controllers;
 
+import ittalents.javaee1.exceptions.BadRequestException;
+
 import javax.servlet.http.HttpSession;
 
 public class SessionManager {
 	private static final String LOGGED = "logged";
 	private static final String USER_ID = "user_id";
-	
+
 	public static boolean isLogged(HttpSession session) {
 		if (session.isNew()) {
 			return false;
@@ -22,7 +24,7 @@ public class SessionManager {
 		throw new ExpiredSessionException();
 	}
 
-	public static class ExpiredSessionException extends Exception {
+	public static class ExpiredSessionException extends BadRequestException {
 		public ExpiredSessionException() {
 			super("Please, login!");
 		}
