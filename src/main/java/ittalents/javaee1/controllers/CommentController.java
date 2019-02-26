@@ -18,7 +18,7 @@ import java.time.LocalDate;
 import static ittalents.javaee1.controllers.ResponseMessages.*;
 
 @RestController
-public class CommentController implements GlobalController {
+public class CommentController extends GlobalController {
 
     @Autowired
     private CommentDao commentDao;

@@ -1,7 +1,7 @@
 package ittalents.javaee1.controllers;
 
 import ittalents.javaee1.exceptions.BadRequestException;
-import ittalents.javaee1.models.User;
+import ittalents.javaee1.models.dto.UserSessionDTO;
 
 import javax.servlet.http.HttpSession;
 
@@ -21,14 +21,14 @@ public class SessionManager {
 	
 	public static long getLoggedUserId(HttpSession session) throws ExpiredSessionException {
 		if (SessionManager.isLogged(session)) {
-			return ((User) session.getAttribute("user")).getId();
+			return ((UserSessionDTO) session.getAttribute(USER)).getId();
 		}
 		throw new ExpiredSessionException();
 	}
 	
-	public static User getLoggedUser(HttpSession session) throws ExpiredSessionException {
+	public static UserSessionDTO getLoggedUser(HttpSession session) throws ExpiredSessionException {
 		if (SessionManager.isLogged(session)) {
-			return ((User) session.getAttribute("user"));
+			return ((UserSessionDTO) session.getAttribute(USER));
 		}
 		throw new ExpiredSessionException();
 	}
@@ -39,7 +39,7 @@ public class SessionManager {
 		}
 	}
 	
-	public static void logUser(HttpSession session, User user) {
+	public static void logUser(HttpSession session, UserSessionDTO user) {
 		session.setAttribute(LOGGED, true);
 		session.setAttribute(USER, user);
 	}

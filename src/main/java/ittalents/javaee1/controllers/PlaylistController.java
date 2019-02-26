@@ -15,7 +15,7 @@ import static ittalents.javaee1.controllers.ResponseMessages.*;
 import static javax.management.Query.value;
 
 @RestController
-public class PlaylistController implements GlobalController {
+public class PlaylistController extends GlobalController {
 
     @Autowired
     PlaylistDao playlistDao;

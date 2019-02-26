@@ -18,7 +18,7 @@ import java.time.LocalDate;
 import static ittalents.javaee1.controllers.ResponseMessages.*;
 
 @RestController
-public class VideoController implements GlobalController {
+public class VideoController extends GlobalController {
 
     @Autowired
     VideoDao videoDao;
@@ -97,7 +97,7 @@ public class VideoController implements GlobalController {
 
     @GetMapping(value = "videos/dislikeVideo/{videoId}")
     public Object dislikeVideo(@PathVariable long videoId, HttpSession session, HttpServletResponse response) throws SessionManager.ExpiredSessionException {
-git         if (!videoDao.checkIfVideoExists(videoId)) {
+        if (!videoDao.checkIfVideoExists(videoId)) {
             return responseForBadRequest(response, NOT_FOUND);
         } else {
             if (!SessionManager.isLogged(session)) {

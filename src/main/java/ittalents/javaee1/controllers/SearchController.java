@@ -13,11 +13,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.servlet.http.HttpServletResponse;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 @RestController
-public class SearchController implements GlobalController {
+public class SearchController extends GlobalController {
 	private static final String EMPTY_FILTER = "{\"error\" : \"Invalid filter option!\"}";
 	private static final String EMPTY_SEARCH = "{\"error\" : \"No matches found!\"}";
 	private static final int TWENTY_MINUTES_DURATION = 60 * 20;
@@ -41,6 +43,7 @@ public class SearchController implements GlobalController {
 			} else {
 				return result;
 			}
+			
 		}
 		throw new InvalidInputException(EMPTY_SEARCH);
 		
