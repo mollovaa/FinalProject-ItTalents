@@ -1,21 +1,26 @@
 package ittalents.javaee1.controllers;
 
-import ittalents.javaee1.exceptions.InvalidInputException;
-import ittalents.javaee1.exceptions.BadRequestException;
+import ittalents.javaee1.exceptions.*;
+
 import ittalents.javaee1.hibernate.UserRepository;
 import ittalents.javaee1.hibernate.VideoRepository;
 import ittalents.javaee1.models.User;
 import ittalents.javaee1.models.Video;
 import ittalents.javaee1.models.VideoCategory;
+import ittalents.javaee1.util.ErrorMessage;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.time.LocalDate;
-import static ittalents.javaee1.controllers.ResponseMessages.*;
+import java.time.LocalDateTime;
+
+import static ittalents.javaee1.controllers.MyResponse.*;
 
 @RestController
-public class VideoController implements GlobalController {
+public class VideoController extends GlobalController {
 
     @Autowired
     VideoRepository videoRepository;
@@ -23,7 +28,7 @@ public class VideoController implements GlobalController {
     UserRepository userRepository;
 
     private void validateVideo(Video video) throws InvalidInputException {
-        if (video.getTitle() == null || video.getTitle().isEmpty()) {  //isempty
+        if (video.getTitle() == null || video.getTitle().isEmpty()) {
             throw new InvalidInputException(INVALID_VIDEO_TITLE);
         }
         if (video.getDuration() <= 0) {
@@ -39,107 +44,95 @@ public class VideoController implements GlobalController {
     }
 
     @GetMapping(value = "videos/showVideo/{videoId}")
-    public Object showVideo(@PathVariable long videoId, HttpServletResponse response) {
+    public Object showVideo(@PathVariable long videoId) throws VideoNotFoundException {
         if (videoRepository.existsById(videoId)) {
             return videoRepository.findById(videoId);
         }
-        return responseForBadRequest(response, NOT_FOUND);
+        throw new VideoNotFoundException();
     }
 
     @PostMapping(value = "videos/addVideo")
-    public Object addVideo(@RequestBody Video video, HttpSession session, HttpServletResponse response)
-            throws BadRequestException {
-        if (SessionManager.isLogged(session)) {
-            this.validateVideo(video);
-            video.setUploaderId(SessionManager.getLoggedUserId(session));
-            return videoRepository.save(video);
-        } else {
-            return redirectingToLogin(response);
+    public Object addVideo(@RequestBody Video video, HttpSession session) throws BadRequestException {
+        if (!SessionManager.isLogged(session)) {
+            throw new NotLoggedException();
         }
+        this.validateVideo(video);
+        video.setUploaderId(SessionManager.getLoggedUserId(session));
+        return videoRepository.save(video);
     }
 
     @GetMapping(value = "videos/removeVideo/{videoId}")
-    public Object removeVideo(@PathVariable long videoId, HttpSession session, HttpServletResponse response) throws BadRequestException {
+    public Object removeVideo(@PathVariable long videoId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
-            return redirectingToLogin(response);
-        } else {
-            if (videoRepository.existsById(videoId)) {
-                Video video = videoRepository.findById(videoId).get();
-                if (SessionManager.getLoggedUserId(session) == video.getUploaderId()) {
-                    videoRepository.deleteById(videoId);
-                    return SUCCESSFULLY_REMOVED_VIDEO;
-                } else {
-                    return responseForBadRequest(response, ACCESS_DENIED);
-                }
-            } else {
-                return responseForBadRequest(response, NOT_FOUND);
-            }
+            throw new NotLoggedException();
         }
+        if (!videoRepository.existsById(videoId)) {
+            throw new VideoNotFoundException();
+        }
+        Video video = videoRepository.findById(videoId).get();
+        if (SessionManager.getLoggedUserId(session) != video.getUploaderId()) {
+            throw new AccessDeniedException();
+        }
+        videoRepository.deleteById(videoId);
+        return new ErrorMessage(SUCCESSFULLY_REMOVED_VIDEO, HttpStatus.OK.value(), LocalDateTime.now());
     }
+
 
     @GetMapping(value = "videos/likeVideo/{videoId}")
-    public Object likeVideo(@PathVariable long videoId, HttpSession session, HttpServletResponse response) throws SessionManager.ExpiredSessionException {
-        if (!videoRepository.existsById(videoId)) {
-            return responseForBadRequest(response, NOT_FOUND);
-        } else {
-            if (!SessionManager.isLogged(session)) {
-                return redirectingToLogin(response);
-            } else {
-                Video video = videoRepository.findById(videoId).get();
-                User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
-
-                if (user.getLikedVideos().contains(video)) {
-
-                    return responseForBadRequest(response, ALREADY_LIKED_VIDEO);
-                } else {
-                    if (user.getDislikedVideos().contains(video)) {//many to many select
-                        user.getDislikedVideos().remove(video);
-                        video.getUsersDislikedVideo().remove(user);
-                        videoRepository.save(video);
-                        userRepository.save(user);
-                        video.setNumberOfDislikes(video.getNumberOfDislikes() - 1);
-                    }
-                    video.getUsersLikedVideo().add(user);
-                    user.addLikedVideo(video);
-                    video.setNumberOfLikes(video.getNumberOfLikes() + 1);
-                    videoRepository.save(video);
-                    userRepository.save(user);
-                    return SUCCESSFULLY_LIKED_VIDEO;
-                }
-            }
+    public Object likeVideo(@PathVariable long videoId, HttpSession session) throws BadRequestException {
+        if (!SessionManager.isLogged(session)) {
+            throw new NotLoggedException();
         }
+        if (!videoRepository.existsById(videoId)) {
+            throw new VideoNotFoundException();
+        }
+        Video video = videoRepository.findById(videoId).get();
+        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        if (user.getLikedVideos().contains(video)) {
+            throw new BadRequestException(ALREADY_LIKED_VIDEO);
+        }
+        if (user.getDislikedVideos().contains(video)) {//many to many select
+            user.getDislikedVideos().remove(video);
+            video.getUsersDislikedVideo().remove(user);
+            videoRepository.save(video);
+            userRepository.save(user);
+            video.setNumberOfDislikes(video.getNumberOfDislikes() - 1);
+        }
+        video.getUsersLikedVideo().add(user);
+        user.addLikedVideo(video);
+        video.setNumberOfLikes(video.getNumberOfLikes() + 1);
+        videoRepository.save(video);
+        userRepository.save(user);
+        return video;
     }
+
 
     @GetMapping(value = "videos/dislikeVideo/{videoId}")
-    public Object dislikeVideo(@PathVariable long videoId, HttpSession session, HttpServletResponse response) throws SessionManager.ExpiredSessionException {
-        if (!videoRepository.existsById(videoId)) {
-            return responseForBadRequest(response, NOT_FOUND);
-        } else {
-            if (!SessionManager.isLogged(session)) {
-                return redirectingToLogin(response);
-            } else {
-                Video video = videoRepository.findById(videoId).get();
-                User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
-                if (user.getDislikedVideos().contains(video)) {
-                    return responseForBadRequest(response, ALREADY_DISLIKED_VIDEO);
-                } else {
-                    if (user.getLikedVideos().contains(video)) {
-                        user.getLikedVideos().remove(video);
-                        video.getUsersLikedVideo().remove(user);
-                        userRepository.save(user);
-                        videoRepository.save(video);
-                        video.setNumberOfLikes(video.getNumberOfLikes() - 1);
-                    }
-                    video.getUsersDislikedVideo().add(user);
-                    user.addDislikedVideo(video);
-                    video.setNumberOfDislikes(video.getNumberOfDislikes() + 1);
-                    videoRepository.save(video);
-                    userRepository.save(user);
-                    return SUCCESSFULLY_DISLIKED_VIDEO;
-                }
-            }
+    public Object dislikeVideo(@PathVariable long videoId, HttpSession session) throws BadRequestException {
+        if (!SessionManager.isLogged(session)) {
+            throw new NotLoggedException();
         }
+        if (!videoRepository.existsById(videoId)) {
+            throw new VideoNotFoundException();
+        }
+        Video video = videoRepository.findById(videoId).get();
+        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        if (user.getDislikedVideos().contains(video)) {
+            throw new BadRequestException(ALREADY_DISLIKED_VIDEO);
+        }
+        if (user.getLikedVideos().contains(video)) {
+            user.getLikedVideos().remove(video);
+            video.getUsersLikedVideo().remove(user);
+            userRepository.save(user);
+            videoRepository.save(video);
+            video.setNumberOfLikes(video.getNumberOfLikes() - 1);
+        }
+        video.getUsersDislikedVideo().add(user);
+        user.addDislikedVideo(video);
+        video.setNumberOfDislikes(video.getNumberOfDislikes() + 1);
+        videoRepository.save(video);
+        userRepository.save(user);
+        return video;
     }
-
 
 }

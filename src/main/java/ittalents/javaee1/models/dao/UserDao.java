@@ -6,17 +6,17 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
-import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Component;
 
 import java.sql.PreparedStatement;
 import java.util.List;
 
-@Repository
+@Component
 public class UserDao {
 	private static final String ADD_USER_QUERY =
 			"INSERT  INTO users (full_name,username,password,email,age) VALUES (?,?,?,?,?)";
-	private static final String GET_USER_QUERY_BY_FULL_NAME =
-			"SELECT user_id,full_name FROM users WHERE full_name LIKE ?";
+	private static final String GET_USER_QUERY_BY_FULL_NAME_LIKE =
+			"SELECT user_id,full_name,username,password,email,age FROM users WHERE full_name LIKE ?";
 	private static final String GET_USER_QUERY_BY_USERNAME =
 			"SELECT user_id,full_name,username,password,email,age FROM users WHERE username = ?";
 	private static final String GET_USER_QUERY_BY_EMAIL =
@@ -31,22 +31,15 @@ public class UserDao {
 	
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
-	
-	public static void manyXmanyUpdate(String query, JdbcTemplate template, long fromId, long toId) {
-		template.update(connection -> {
-			PreparedStatement ps = connection.prepareStatement(query);
-			ps.setLong(1, fromId);
-			ps.setLong(2, toId);
-			return ps;
-		});
-	}
+	@Autowired
+	private GlobalDao globalDao;
 	
 	public void addSubscription(long fromId, long toId) {
-		manyXmanyUpdate(INSERT_INTO_SUBSCRIPTIONS, jdbcTemplate, fromId, toId);
+		globalDao.manyXmanyUpdate(INSERT_INTO_SUBSCRIPTIONS, jdbcTemplate, fromId, toId);
 	}
 	
 	public void removeSubscription(long fromId, long toId) {
-		manyXmanyUpdate(DELETE_FROM_SUBSCRIPTIONS, jdbcTemplate, fromId, toId);
+		globalDao.manyXmanyUpdate(DELETE_FROM_SUBSCRIPTIONS, jdbcTemplate, fromId, toId);
 	}
 	
 	public boolean isSubscribed(long id, long toId) {
@@ -99,8 +92,8 @@ public class UserDao {
 		}
 	}
 	
-	public List<User> getByFullNameLike(String full_name) { // return user that matches username in DB
-		return jdbcTemplate.query(GET_USER_QUERY_BY_FULL_NAME, searchUserRowMapper,
+	public List<User> getByFullNameLike(String full_name) {
+		return jdbcTemplate.query(GET_USER_QUERY_BY_FULL_NAME_LIKE, userRowMapper,
 				"%" + full_name + "%");
 		
 	}
@@ -116,10 +109,5 @@ public class UserDao {
 		user.setUserId(id);
 		return user;
 	};
-	private RowMapper<User> searchUserRowMapper = (resultSet, i) -> {
-		long id = resultSet.getInt("user_id");
-		String fullName = resultSet.getString("full_name");
-		User user = new User(id, fullName);
-		return user;
-	};
+	
 }

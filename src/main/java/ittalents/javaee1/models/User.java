@@ -1,5 +1,6 @@
 package ittalents.javaee1.models;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import ittalents.javaee1.models.search.SearchType;
@@ -7,14 +8,16 @@ import ittalents.javaee1.models.search.Searchable;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
 @AllArgsConstructor
 @NoArgsConstructor
+@Getter
+@Setter
 @Entity
 @Table(name = "users")
 public class User implements Searchable {
@@ -40,6 +43,7 @@ public class User implements Searchable {
     public void addLikedVideo(Video video) {
         this.likedVideos.add(video);
     }
+
 
     @ManyToMany(cascade = {CascadeType.ALL})
     @JoinTable(
@@ -90,39 +94,6 @@ public class User implements Searchable {
         this.username = username;
         this.password = password;
         this.email = email;
-    }
-
-    public User(long userId, String full_name) {
-        this.userId = userId;
-        this.full_name = full_name;
-    }
-
-    public void setUserId(long userId) {
-        this.userId = userId;
-    }
-
-    public long getUserId() {
-        return userId;
-    }
-
-    public int getAge() {
-        return age;
-    }
-
-    public String getFull_name() {
-        return full_name;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public String getEmail() {
-        return email;
     }
 
     @Override

@@ -1,13 +1,14 @@
 package ittalents.javaee1.controllers;
 
-import ittalents.javaee1.exceptions.BadRequestException;
+import ittalents.javaee1.exceptions.NotLoggedException;
+import ittalents.javaee1.models.dto.UserSessionDTO;
 
 import javax.servlet.http.HttpSession;
 
 public class SessionManager {
 	private static final String LOGGED = "logged";
-	private static final String USER_ID = "user_id";
-
+	private static final String USER = "user";
+	
 	public static boolean isLogged(HttpSession session) {
 		if (session.isNew()) {
 			return false;
@@ -17,21 +18,23 @@ public class SessionManager {
 		}
 		return true;
 	}
-	public static long getLoggedUserId(HttpSession session) throws ExpiredSessionException {
-		if(SessionManager.isLogged(session)){
-			return ((Long)session.getAttribute(USER_ID));
+	
+	public static long getLoggedUserId(HttpSession session) throws NotLoggedException {
+		if (SessionManager.isLogged(session)) {
+			return ((UserSessionDTO) session.getAttribute(USER)).getId();
 		}
-		throw new ExpiredSessionException();
+		throw new NotLoggedException();
+	}
+	
+	public static UserSessionDTO getLoggedUser(HttpSession session) throws NotLoggedException {
+		if (SessionManager.isLogged(session)) {
+			return ((UserSessionDTO) session.getAttribute(USER));
+		}
+		throw new NotLoggedException();
 	}
 
-	public static class ExpiredSessionException extends BadRequestException {
-		public ExpiredSessionException() {
-			super("Please, login!");
-		}
-	}
-
-	public static void logUser(HttpSession session, long user_id) {
+	public static void logUser(HttpSession session, UserSessionDTO user) {
 		session.setAttribute(LOGGED, true);
-		session.setAttribute(USER_ID, user_id);
+		session.setAttribute(USER, user);
 	}
 }
