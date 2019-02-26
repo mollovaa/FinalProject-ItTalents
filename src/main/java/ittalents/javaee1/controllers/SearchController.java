@@ -17,7 +17,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.util.*;
 
 @RestController
-public class SearchController {
+public class SearchController implements GlobalController {
 	private static final String EMPTY_FILTER = "{\"error\" : \"Invalid filter option!\"}";
 	private static final String EMPTY_SEARCH = "{\"error\" : \"No matches found!\"}";
 	private static final int TWENTY_MINUTES_DURATION = 60 * 20;
@@ -30,70 +30,55 @@ public class SearchController {
 	private PlaylistDao playlistDao;
 	
 	@GetMapping(value = "/search")
-	public Object search(@RequestParam("q") String search_query, HttpServletResponse response) {
-		try {
-			if (search_query != null && !search_query.isEmpty()) {
-				List<Searchable> result = new ArrayList<>();
-				result.addAll(userDao.getByFullNameLike(search_query));
-				result.addAll(videoDao.getVideoByTitle(search_query));
-				result.addAll(playlistDao.getPlaylistByTitle(search_query));
-				if (result.isEmpty()) {
-					return EMPTY_SEARCH;
-				} else {
-					return result;
-				}
-			} else {
-				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+	public Object search(@RequestParam("q") String search_query) throws InvalidInputException {
+		if (search_query != null && !search_query.isEmpty()) {
+			List<Searchable> result = new ArrayList<>();
+			result.addAll(userDao.getByFullNameLike(search_query));
+			result.addAll(videoDao.getVideoByTitle(search_query));
+			result.addAll(playlistDao.getPlaylistByTitle(search_query));
+			if (result.isEmpty()) {
 				return EMPTY_SEARCH;
+			} else {
+				return result;
 			}
-		} catch (Exception e) {
-			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-			return UserController.SERVER_ERROR;
 		}
+		throw new InvalidInputException(EMPTY_SEARCH);
+		
 	}
 	
 	@GetMapping(value = "/search/filterBy")
-	public Object search(@RequestParam("q") String search_query, @RequestParam("filter") String filter,
-						 HttpServletResponse response) {
-		//TODO validate filted and search query then validate myFilter
-		try {
-			if (search_query != null && !search_query.isEmpty()) {
-				if (filter != null && !filter.isEmpty()) {
-					Filter myFilter = getFilter(filter);
-					if (myFilter == null) {
-						throw new InvalidInputException(EMPTY_FILTER);
-					}
-					List<Searchable> result = new ArrayList<>();
-					
-					if (myFilter.getSearchType() == SearchType.USER) { // Sort Only Users
-						result.addAll(userDao.getByFullNameLike(search_query));
-					} else if (myFilter.getSearchType() == SearchType.PLAYLIST) { //Sort Only Playlists
-						result.addAll(playlistDao.getPlaylistByTitle(search_query));
-					} else {
-						//Video Filters
-						result.addAll(getFilteredVideos(search_query, myFilter));
-					}
-					if (result.isEmpty()) {
-						return EMPTY_SEARCH;
-					}
-					return result;
-				} else {
+	public Object search(@RequestParam("q") String search_query, @RequestParam("filter") String filter)
+			throws InvalidInputException {
+		if (search_query != null && !search_query.isEmpty()) {
+			if (filter != null && !filter.isEmpty()) {
+				Filter myFilter = getFilter(filter);
+				if (myFilter == null) {
 					throw new InvalidInputException(EMPTY_FILTER);
 				}
+				List<Searchable> result = new ArrayList<>();
+				
+				if (myFilter.getSearchType() == SearchType.USER) { // Sort Only Users
+					result.addAll(userDao.getByFullNameLike(search_query));
+				} else if (myFilter.getSearchType() == SearchType.PLAYLIST) { //Sort Only Playlists
+					result.addAll(playlistDao.getPlaylistByTitle(search_query));
+				} else {
+					//Video Filters
+					result.addAll(getFilteredVideos(search_query, myFilter));
+				}
+				if (result.isEmpty()) {
+					return EMPTY_SEARCH;
+				}
+				return result;
 			} else {
-				throw new InvalidInputException(EMPTY_SEARCH);
+				throw new InvalidInputException(EMPTY_FILTER);
 			}
-		} catch (InvalidInputException e) {
-			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-			return e.getMessage();
-		} catch (Exception e) {
-			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-			return UserController.SERVER_ERROR;
+		} else {
+			throw new InvalidInputException(EMPTY_SEARCH);
 		}
 		
 	}
 	
-	private List<Video> getFilteredVideos(String search_query, Filter filter) throws Exception {
+	private List<Video> getFilteredVideos(String search_query, Filter filter) throws InvalidInputException {
 		if (filter == Filter.DATE_OF_UPLOAD) {
 			List<Video> videos = videoDao.getVideoByTitle(search_query);
 			Collections.sort(videos, Comparator.comparing(Video::getUploadDate).reversed());
