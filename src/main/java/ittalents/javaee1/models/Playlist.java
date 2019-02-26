@@ -1,23 +1,44 @@
 package ittalents.javaee1.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import ittalents.javaee1.models.search.SearchType;
 import ittalents.javaee1.models.search.Searchable;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import javax.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
 @AllArgsConstructor
+@NoArgsConstructor
+@Entity
+@Table(name = "playlists")
 public class Playlist implements Searchable {
 
-    private long id;
-    private String name;
-    private long ownerId;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long playlistId;
+    private String playlistName;
+    private long ownerId;     //todo one to many
 
-    public Playlist(String name) {
-        this.name = name;
-    }
+
+    @ManyToMany(cascade = {CascadeType.REFRESH})
+    @JoinTable(
+            name = "playlists_videos",
+            joinColumns = {@JoinColumn(name = "playlist_id")},
+            inverseJoinColumns = {@JoinColumn(name = "video_id")}
+    )
+    private List<Video> videosInPlaylist = new ArrayList<>();
+
+    @JsonIgnore
+    @ManyToOne(cascade = {CascadeType.ALL})
+    @JoinColumn(name = "ownerId", insertable = false, updatable = false)   //!!!
+    private User owner;
 
     @Override
     public SearchType getType() {

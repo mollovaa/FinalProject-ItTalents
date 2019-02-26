@@ -22,7 +22,7 @@ public class UserController {
 	private static final String EXISTING_EMAIL = "{\"error\" : \"Email already exists!\"}";
 	private static final String EXISTING_USERNAME = "{\"error\" : \"Username already exists!\"}";
 	private static final String INVALID_USERNAME = "{\"error\" : \"Invalid Username!\"}";
-	private static final String INVALID_FULL_NAME = "{\"error\" : \"Invalid Full name!\"}";
+	private static final String INVALID_FULL_NAME = "{\"error\" : \"Invalid Full playlistName!\"}";
 	private static final String INVALID_EMAIL = "{\"error\" : \"Invalid Email!\"}";
 	private static final String INVALID_AGE = "{\"error\" : \"Invalid Age!\"}";
 	private static final String INVALID_PASSWORD = "{\"error\" : \"Invalid Password!\"}";
@@ -115,7 +115,7 @@ public class UserController {
 				return WRONG_CREDENTIALS;
 			} else {
 				if (CryptWithMD5.cryptWithMD5(user.getPassword()).equals(userCheckUsername.getPassword())) {
-					SessionManager.logUser(session, userCheckUsername.getId());
+					SessionManager.logUser(session, userCheckUsername.getUserId());
 					return SUCCESSFUL_LOG_IN;
 				} else {
 					response.setStatus(HttpServletResponse.SC_BAD_REQUEST);

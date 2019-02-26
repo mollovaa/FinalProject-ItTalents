@@ -57,7 +57,7 @@ public class UserDao {
 		return isSubed == 1;
 	}
 	
-	public void addUser(User user) { // includes user and setting him the generated id from DB
+	public void addUser(User user) { // includes user and setting him the generated commentId from DB
 		KeyHolder keyHolder = new GeneratedKeyHolder();
 		
 		jdbcTemplate.update(connection -> {
@@ -69,7 +69,7 @@ public class UserDao {
 			ps.setInt(5, user.getAge());
 			return ps;
 		}, keyHolder);
-		user.setId(keyHolder.getKey().longValue());
+		user.setUserId(keyHolder.getKey().longValue());
 	}
 	
 	public User getByUsername(String username) { // return user that matches username in DB
@@ -113,7 +113,7 @@ public class UserDao {
 		String email = resultSet.getString("email");
 		int age = resultSet.getInt("age");
 		User user = new User(age, fullName, username, password, email);
-		user.setId(id);
+		user.setUserId(id);
 		return user;
 	};
 	private RowMapper<User> searchUserRowMapper = (resultSet, i) -> {
