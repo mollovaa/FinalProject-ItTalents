@@ -1,6 +1,7 @@
 package ittalents.javaee1.models;
 
 import java.util.Arrays;
+import java.util.stream.Collectors;
 
 
 public enum VideoCategory {
@@ -9,8 +10,7 @@ public enum VideoCategory {
     SPORT;
 
 
-
-    public static boolean contains(VideoCategory category) {
-        return Arrays.asList(values()).contains(category);
+    public static boolean contains(String category) {
+        return Arrays.stream(values()).map(VideoCategory::name).collect(Collectors.toList()).contains(category.toUpperCase());
     }
 }

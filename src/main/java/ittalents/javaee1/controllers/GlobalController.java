@@ -17,58 +17,43 @@ import javax.servlet.http.HttpServletResponse;
 
 import java.time.LocalDateTime;
 
-import static ittalents.javaee1.controllers.ResponseMessages.EXPIRED_SESSION;
-import static ittalents.javaee1.controllers.ResponseMessages.SERVER_ERROR;
+import static ittalents.javaee1.controllers.MyResponse.EXPIRED_SESSION;
+import static ittalents.javaee1.controllers.MyResponse.SERVER_ERROR;
 
 public abstract class GlobalController {
-	private static Logger logger = LogManager.getLogger(GlobalController.class);
-	
-	@ExceptionHandler({Exception.class})
-	@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-	@ResponseBody
-	public Object handleServerError(Exception e) {
-		logger.error(e.getMessage(), e);
-		return new ErrorMessage(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), LocalDateTime.now());
-	}
-	
-	@ExceptionHandler({NotLoggedException.class})
-	@ResponseStatus(HttpStatus.UNAUTHORIZED)
-	@ResponseBody
-	public ErrorMessage handleNotLogged(Exception e) {
-		logger.error(e.getMessage());
-		return new ErrorMessage(e.getMessage(), HttpStatus.UNAUTHORIZED.value(), LocalDateTime.now());
-	}
-	
-	@ExceptionHandler({HttpMessageNotReadableException.class})
-	@ResponseStatus(HttpStatus.BAD_REQUEST)
-	@ResponseBody
-	public ErrorMessage handleEmptyJsonBody(Exception e) {
-		logger.error(e.getMessage(), e);
-		return new ErrorMessage(e.getMessage(), HttpStatus.UNAUTHORIZED.value(), LocalDateTime.now());
-	}
-	
-	@ExceptionHandler({BadRequestException.class})
-	@ResponseStatus(HttpStatus.BAD_REQUEST)
-	@ResponseBody
-	public ErrorMessage handleOwnException(Exception e) {
-		logger.error(e.getMessage());
-		return new ErrorMessage(e.getMessage(), HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
-	}
-	
-	@ResponseBody
-	public Object redirectingToLogin(HttpServletResponse response) {
-		try {
-			response.sendRedirect("/login");
-			return EXPIRED_SESSION;
-		} catch (Exception e) {
-			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-			return SERVER_ERROR;
-		}
-	}
-	
-	public Object responseForBadRequest(HttpServletResponse response, String message) {
-		response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-		return message;
-	}
-	
+    private static Logger logger = LogManager.getLogger(GlobalController.class);
+
+    @ExceptionHandler({Exception.class})
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ResponseBody
+    public Object handleServerError(Exception e) {
+        logger.error(e.getMessage(), e);
+        return new ErrorMessage(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), LocalDateTime.now());
+    }
+
+    @ExceptionHandler({NotLoggedException.class})
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    @ResponseBody
+    public ErrorMessage handleNotLogged(Exception e) {
+        logger.error(e.getMessage());
+        return new ErrorMessage(e.getMessage(), HttpStatus.UNAUTHORIZED.value(), LocalDateTime.now());
+    }
+
+    @ExceptionHandler({HttpMessageNotReadableException.class})
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseBody
+    public ErrorMessage handleEmptyJsonBody(Exception e) {
+        logger.error(e.getMessage(), e);
+        return new ErrorMessage(e.getMessage(), HttpStatus.UNAUTHORIZED.value(), LocalDateTime.now());
+    }
+
+    @ExceptionHandler({BadRequestException.class})
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseBody
+    public ErrorMessage handleOwnException(Exception e) {
+        logger.error(e.getMessage());
+        return new ErrorMessage(e.getMessage(), HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+    }
+
+
 }

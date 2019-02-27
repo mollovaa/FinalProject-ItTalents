@@ -1,29 +1,34 @@
 package ittalents.javaee1.controllers;
 
 
-import ittalents.javaee1.exceptions.InvalidInputException;
-import ittalents.javaee1.exceptions.BadRequestException;
+import ittalents.javaee1.exceptions.*;
+import ittalents.javaee1.hibernate.CommentRepository;
+import ittalents.javaee1.hibernate.UserRepository;
+import ittalents.javaee1.hibernate.VideoRepository;
 import ittalents.javaee1.models.Comment;
-import ittalents.javaee1.models.dao.CommentDao;
-import ittalents.javaee1.models.dao.VideoDao;
+import ittalents.javaee1.models.User;
+
+import ittalents.javaee1.util.ErrorMessage;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
-
-import static ittalents.javaee1.controllers.ResponseMessages.*;
+import static ittalents.javaee1.controllers.MyResponse.*;
 
 @RestController
 public class CommentController extends GlobalController {
 
     @Autowired
-    private CommentDao commentDao;
+    private CommentRepository commentRepository;
     @Autowired
-    private VideoDao videoDao;
+    private VideoRepository videoRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     private void validateComment(Comment comment) throws InvalidInputException {
         if (comment.getMessage() == null || comment.getMessage().isEmpty()) {
@@ -35,91 +40,110 @@ public class CommentController extends GlobalController {
     }
 
     @PostMapping(value = "comments/commentVideo/{videoId}")
-    public Object commentVideo(@RequestBody Comment comment, @PathVariable long videoId,
-                               HttpSession session, HttpServletResponse response) throws BadRequestException {
+    public Object commentVideo(@RequestBody Comment comment, @PathVariable long videoId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
-            return redirectingToLogin(response);
-        } else {
-            if (!videoDao.checkIfVideoExists(videoId)) {
-                return responseForBadRequest(response, NOT_FOUND);
-            } else {
-                this.validateComment(comment);
-                comment.setPublisherId(SessionManager.getLoggedUserId(session));
-                comment.setVideoId(videoId);
-                commentDao.addCommentToVideo(comment);
-                return comment;
-            }
+            throw new NotLoggedException();
         }
+        if (!videoRepository.existsById(videoId)) {
+            throw new VideoNotFoundException();
+        }
+        this.validateComment(comment);
+        comment.setPublisherId(SessionManager.getLoggedUserId(session));
+        comment.setVideoId(videoId);
+        comment.setResponseToId(null);
+        return commentRepository.save(comment);
     }
 
     @PostMapping(value = "comments/responseToComment/{commentId}")
-    public Object responseComment(@RequestBody Comment comment, @PathVariable long commentId,
-                                  HttpSession session, HttpServletResponse response) throws BadRequestException {
+    public Object responseComment(@RequestBody Comment comment, @PathVariable long commentId, HttpSession session)
+            throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
-            return redirectingToLogin(response);
-        } else {
-            if (!commentDao.checkIfCommentExists(commentId)) {
-                return responseForBadRequest(response, NOT_FOUND);
-            } else {
-                this.validateComment(comment);
-                comment.setPublisherId(SessionManager.getLoggedUserId(session));
-                comment.setVideoId(commentDao.getVideoIdByComment(commentId));
-                comment.setResponseToId(commentId);
-                commentDao.addResponseToComment(comment);
-                return comment;
-            }
+            throw new NotLoggedException();
         }
+        if (!commentRepository.existsById(commentId)) {
+            throw new CommentNotFoundException();
+        }
+        this.validateComment(comment);
+        comment.setPublisherId(SessionManager.getLoggedUserId(session));
+        comment.setVideoId(commentRepository.findById(commentId).get().getVideoId());
+        comment.setResponseToId(commentId);
+        return commentRepository.save(comment);
     }
 
     @GetMapping(value = "comments/likeComment/{commentId}")
-    public Object likeVideo(@PathVariable long commentId, HttpSession session, HttpServletResponse response) throws BadRequestException {
-        if (!commentDao.checkIfCommentExists(commentId)) {
-            return responseForBadRequest(response, NOT_FOUND);
-        } else {
-            if (!SessionManager.isLogged(session)) {
-                return redirectingToLogin(response);
-            } else {
-                if (!commentDao.likeComment(commentId, SessionManager.getLoggedUserId(session))) {
-                    return responseForBadRequest(response, ALREADY_LIKED_COMMENT);
-                }
-                return SUCCESSFULLY_LIKED_COMMENT;
-            }
+    public Object likeVideo(@PathVariable long commentId, HttpSession session) throws BadRequestException {
+        if (!SessionManager.isLogged(session)) {
+            throw new NotLoggedException();
         }
+        if (!commentRepository.existsById(commentId)) {
+            throw new CommentNotFoundException();
+        }
+        Comment comment = commentRepository.findById(commentId).get();
+        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        if (user.getLikedComments().contains(comment)) {
+            throw new BadRequestException(ALREADY_LIKED_COMMENT);
+        }
+        if (user.getDislikedComments().contains(comment)) {  //many to many select
+            user.getDislikedComments().remove(comment);
+            comment.getUsersDislikedComment().remove(user);
+            commentRepository.save(comment);
+            userRepository.save(user);
+            comment.setNumberOfDislikes(comment.getNumberOfDislikes() - 1);
+        }
+        comment.getUsersLikedComment().add(user);
+        user.addLikedComment(comment);
+        comment.setNumberOfLikes(comment.getNumberOfLikes() + 1);
+        commentRepository.save(comment);
+        userRepository.save(user);
+        return comment;
     }
 
     @GetMapping(value = "comments/dislikeComment/{commentId}")
-    public Object dislikeVideo(@PathVariable long commentId, HttpSession session, HttpServletResponse response) throws BadRequestException {
-        if (!commentDao.checkIfCommentExists(commentId)) {
-            return responseForBadRequest(response, NOT_FOUND);
-        } else {
-            if (!SessionManager.isLogged(session)) {
-                return redirectingToLogin(response);
-            } else {
-                if (!commentDao.dislikeComment(commentId, SessionManager.getLoggedUserId(session))) {
-                    return responseForBadRequest(response, ALREADY_DISLIKED_COMMENT);
-                }
-                return SUCCESSFULLY_DISLIKED_COMMENT;
-            }
+    public Object dislikeVideo(@PathVariable long commentId, HttpSession session) throws BadRequestException {
+        if (!SessionManager.isLogged(session)) {
+            throw new NotLoggedException();
         }
+        if (!commentRepository.existsById(commentId)) {
+            throw new CommentNotFoundException();
+        }
+        Comment comment = commentRepository.findById(commentId).get();
+        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        if (user.getDislikedComments().contains(comment)) {
+            throw new BadRequestException(ALREADY_DISLIKED_COMMENT);
+        }
+        if (user.getLikedComments().contains(comment)) {   //if liked -> remove the like
+            user.getLikedComments().remove(comment);
+            comment.getUsersLikedComment().remove(user);
+            userRepository.save(user);
+            commentRepository.save(comment);
+            comment.setNumberOfLikes(comment.getNumberOfLikes() - 1);
+        }
+        comment.getUsersDislikedComment().add(user);
+        user.getDislikedComments().add(comment);
+        comment.setNumberOfDislikes(comment.getNumberOfDislikes() + 1);
+        commentRepository.save(comment);
+        userRepository.save(user);
+        return comment;
     }
 
     @GetMapping(value = "comments/removeComment/{commentId}")
-    public Object removeVideo(@PathVariable long commentId, HttpSession session, HttpServletResponse response) throws BadRequestException {
-        if (!commentDao.checkIfCommentExists(commentId)) {
-            return responseForBadRequest(response, NOT_FOUND);
-        } else {
-            if (SessionManager.isLogged(session)) {
-                if (SessionManager.getLoggedUserId(session) == commentDao.getPublisherIdByComment(commentId)) {
-                    commentDao.removeComment(commentId);
-                    return SUCCESSFULLY_REMOVED_COMMENT;
-                } else {
-                    return responseForBadRequest(response, ACCESS_DENIED);
-                }
-            } else {
-                return redirectingToLogin(response);
-            }
+    public Object removeVideo(@PathVariable long commentId, HttpSession session) throws BadRequestException {
+        if (!SessionManager.isLogged(session)) {
+            throw new NotLoggedException();
         }
+        if (!commentRepository.existsById(commentId)) {
+            throw new CommentNotFoundException();
+        }
+        Comment comment = commentRepository.findById(commentId).get();
+        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        if (user.getUserId() != comment.getPublisherId()) {
+            throw new AccessDeniedException();
+        }
+        commentRepository.deleteById(commentId);
+        return new ErrorMessage(SUCCESSFULLY_REMOVED_COMMENT, HttpStatus.OK.value(), LocalDateTime.now());
     }
-
-
 }
+
+
+
+

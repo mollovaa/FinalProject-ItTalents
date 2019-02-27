@@ -14,6 +14,7 @@ import ittalents.javaee1.util.MailManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletResponse;
 import javax.mail.MessagingException;
 import javax.servlet.http.HttpSession;
 
@@ -100,7 +101,7 @@ public class UserController extends GlobalController {
 		} else {
 			if (CryptWithMD5.cryptWithMD5(userLoginDTO.getPassword()).equals(userCheckUsername.getPassword())) {
 				UserSessionDTO userSessionDTO = new UserSessionDTO(
-						userCheckUsername.getId(),
+						userCheckUsername.getUserId(),
 						userCheckUsername.getAge(),
 						userCheckUsername.getUsername(),
 						userCheckUsername.getFull_name(),
@@ -141,7 +142,7 @@ public class UserController extends GlobalController {
 			throw new InvalidInputException(WRONG_CREDENTIALS);
 		}
 		String password = user.getPassword();
-		if (password == null || password.isEmpty()) {
+		if (password == null || password.isEmpty() || password.contains(" ")) {
 			throw new InvalidInputException(WRONG_CREDENTIALS);
 		}
 	}
