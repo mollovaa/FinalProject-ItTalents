@@ -4,17 +4,15 @@ import ittalents.javaee1.exceptions.BadRequestException;
 import ittalents.javaee1.exceptions.InvalidInputException;
 import ittalents.javaee1.exceptions.InvalidJsonBodyException;
 import ittalents.javaee1.exceptions.NotLoggedException;
+import ittalents.javaee1.hibernate.UserRepository;
 import ittalents.javaee1.models.User;
 import ittalents.javaee1.models.dao.CryptWithMD5;
-import ittalents.javaee1.models.dao.UserDao;
 import ittalents.javaee1.models.dto.UserLoginDTO;
 import ittalents.javaee1.models.dto.UserRegisterDTO;
 import ittalents.javaee1.models.dto.UserSessionDTO;
-import ittalents.javaee1.util.MailManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletResponse;
 import javax.mail.MessagingException;
 import javax.servlet.http.HttpSession;
 
@@ -38,7 +36,7 @@ public class UserController extends GlobalController {
 	
 	
 	@Autowired
-	private UserDao userDao;
+	private UserRepository userRepository;
 	
 	@GetMapping(value = "/logout")
 	public Object logout(HttpSession session) throws BadRequestException {
@@ -50,12 +48,17 @@ public class UserController extends GlobalController {
 	}
 	
 	@GetMapping(value = "/unsubscribe/{id}")
-	public Object unsubscribeTo(HttpSession session, @PathVariable("id") long id) throws BadRequestException {
+	public Object unSubscribeFrom(HttpSession session, @PathVariable("id") long id) throws BadRequestException {
 		
 		if (SessionManager.isLogged(session)) {
-			if (userDao.getById(id) != null) {  // user we are subscribing to exists
-				if (userDao.isSubscribed(SessionManager.getLoggedUserId(session), id)) {
-					userDao.removeSubscription(SessionManager.getLoggedUserId(session), id);
+			if (userRepository.existsById(id)) {  // user we are subscribing to exists
+				User unSubscribeFrom = userRepository.findById(id).get();//subscriber
+				User loggedUser = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+				if (loggedUser.getMySubscribers().contains(unSubscribeFrom)) {
+					loggedUser.getMySubscribers().remove(unSubscribeFrom);
+					unSubscribeFrom.getSubscribedToUsers().remove(loggedUser);
+					userRepository.save(loggedUser);
+					userRepository.save(unSubscribeFrom);
 					return UNSUBSCRIBED;
 				} else {  //not subbed
 					throw new InvalidInputException(NOT_SUBSCRIBED);
@@ -71,11 +74,16 @@ public class UserController extends GlobalController {
 	public Object subscribeTo(HttpSession session, @PathVariable("id") long id) throws BadRequestException, MessagingException {
 		
 		if (SessionManager.isLogged(session)) {
-			if (userDao.getById(id) != null) {  // user we are subscribing to exists
-				if (userDao.isSubscribed(SessionManager.getLoggedUserId(session), id)) { // already subbed
+			if (userRepository.existsById(id)) {  // user we are subscribing to exists
+				User subscribeTo = userRepository.findById(id).get();//subscriber
+				User loggedUser = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+				if (loggedUser.getMySubscribers().contains(subscribeTo)) { // already subbed
 					throw new InvalidInputException(ALREADY_SUBSCRIBED);
-				} else { // add subscribtion
-					userDao.addSubscription(SessionManager.getLoggedUserId(session), id);
+				} else { // add subscription
+					loggedUser.getMySubscribers().add(subscribeTo);
+					subscribeTo.getSubscribedToUsers().add(loggedUser);
+					userRepository.save(loggedUser);
+					userRepository.save(subscribeTo);
 					return SUBSCRIBED;
 				}
 			} else {
@@ -87,7 +95,6 @@ public class UserController extends GlobalController {
 	
 	@PostMapping(value = "/login")
 	public Object loginUser(@RequestBody UserLoginDTO userLoginDTO, HttpSession session) throws BadRequestException {
-		
 		if (userLoginDTO == null) {
 			throw new InvalidJsonBodyException(INVALID_JSON_BODY);
 		}
@@ -95,24 +102,24 @@ public class UserController extends GlobalController {
 			throw new InvalidInputException(ALREADY_LOGGED);
 		}
 		validateLogin(userLoginDTO);
-		User userCheckUsername = userDao.getByUsername(userLoginDTO.getUsername());
-		if (userCheckUsername == null) {
-			throw new InvalidInputException(WRONG_CREDENTIALS);
-		} else {
-			if (CryptWithMD5.cryptWithMD5(userLoginDTO.getPassword()).equals(userCheckUsername.getPassword())) {
+		if (userRepository.existsByUsername(userLoginDTO.getUsername())) {
+			
+			User dbUser = userRepository.getByUsername(userLoginDTO.getUsername());
+			if (CryptWithMD5.cryptWithMD5(userLoginDTO.getPassword()).equals(dbUser.getPassword())) {
 				UserSessionDTO userSessionDTO = new UserSessionDTO(
-						userCheckUsername.getUserId(),
-						userCheckUsername.getAge(),
-						userCheckUsername.getUsername(),
-						userCheckUsername.getFull_name(),
-						userCheckUsername.getEmail());
+						dbUser.getUserId(),
+						dbUser.getAge(),
+						dbUser.getUsername(),
+						dbUser.getFullName(),
+						dbUser.getEmail());
 				SessionManager.logUser(session, userSessionDTO); // log into session then return as response
 				return userSessionDTO;
 			} else {
 				throw new InvalidInputException(WRONG_CREDENTIALS);
 			}
+		} else {
+			throw new InvalidInputException(WRONG_CREDENTIALS);
 		}
-		
 	}
 	
 	@PostMapping(value = "/register")
@@ -121,12 +128,11 @@ public class UserController extends GlobalController {
 			throw new InvalidJsonBodyException(INVALID_JSON_BODY);
 		}
 		validateRegister(userRegisterDTO);
-		User userCheckUsername = userDao.getByUsername(userRegisterDTO.getUsername());
-		if (userCheckUsername == null) { // no such userRegisterDTO with that username
-			User userCheckEmail = userDao.getByEmail(userRegisterDTO.getEmail());
-			if (userCheckEmail == null) { // no such userRegisterDTO with that email
-				userDao.addUser(new User(userRegisterDTO.getAge(), userRegisterDTO.getFullname(),
-						userRegisterDTO.getUsername(), userRegisterDTO.getPassword(), userRegisterDTO.getEmail()));
+		if (!userRepository.existsByUsername(userRegisterDTO.getUsername())) {
+			if (!userRepository.existsByEmail(userRegisterDTO.getEmail())) {
+				userRepository.save(new User(userRegisterDTO.getAge(), userRegisterDTO.getFullName(),
+						userRegisterDTO.getUsername(), CryptWithMD5.cryptWithMD5(userRegisterDTO.getPassword()),
+						userRegisterDTO.getEmail()));
 				return SUCCESSFUL_REGISTRATION;
 			} else {
 				throw new InvalidInputException(EXISTING_EMAIL);
@@ -138,7 +144,7 @@ public class UserController extends GlobalController {
 	
 	private void validateLogin(UserLoginDTO user) throws InvalidInputException {
 		String username = user.getUsername();
-		if (username == null || username.isEmpty()) {
+		if (username == null || username.isEmpty() || username.contains(" ")) {
 			throw new InvalidInputException(WRONG_CREDENTIALS);
 		}
 		String password = user.getPassword();
@@ -154,7 +160,7 @@ public class UserController extends GlobalController {
 		if (email == null || email.isEmpty()) {
 			throw new InvalidInputException(INVALID_EMAIL);
 		}
-		String fullname = user.getFullname();
+		String fullname = user.getFullName();
 		if (fullname == null || fullname.isEmpty()) {
 			throw new InvalidInputException(INVALID_FULL_NAME);
 		}

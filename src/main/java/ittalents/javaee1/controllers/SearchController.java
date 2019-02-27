@@ -2,18 +2,18 @@ package ittalents.javaee1.controllers;
 
 import ittalents.javaee1.exceptions.InvalidInputException;
 import ittalents.javaee1.hibernate.PlaylistRepository;
+import ittalents.javaee1.hibernate.UserRepository;
 import ittalents.javaee1.hibernate.VideoRepository;
 import ittalents.javaee1.models.Video;
 import ittalents.javaee1.models.search.Filter;
 import ittalents.javaee1.models.search.SearchType;
 import ittalents.javaee1.models.search.Searchable;
 
-import ittalents.javaee1.models.dao.UserDao;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -24,19 +24,20 @@ public class SearchController extends GlobalController {
 	private static final String EMPTY_FILTER = "{\"error\" : \"Invalid filter option!\"}";
 	private static final String EMPTY_SEARCH = "{\"error\" : \"No matches found!\"}";
 	private static final int TWENTY_MINUTES_DURATION = 60 * 20;
-	public static final int FOUR_MINUTES_DURATION = 4 * 60;
+	private static final int FOUR_MINUTES_DURATION = 4 * 60;
+	
 	@Autowired
-	private UserDao userDao;
+	private UserRepository userRepository;
 	@Autowired
 	private PlaylistRepository playlistRepository;
 	@Autowired
 	private VideoRepository videoRepository;
-
+	
 	@GetMapping(value = "/search")
 	public Object search(@RequestParam("q") String search_query) throws InvalidInputException {
 		if (search_query != null && !search_query.isEmpty()) {
 			List<Searchable> result = new ArrayList<>();
-			result.addAll(userDao.getByFullNameLike(search_query));
+			result.addAll(userRepository.findAllByFullNameContaining(search_query));
 			result.addAll(videoRepository.findAllByTitleContaining(search_query));
 			result.addAll(playlistRepository.findAllByPlaylistName(search_query));
 			if (result.isEmpty()) {
@@ -44,12 +45,12 @@ public class SearchController extends GlobalController {
 			} else {
 				return result;
 			}
-
+			
 		}
 		throw new InvalidInputException(EMPTY_SEARCH);
-
+		
 	}
-
+	
 	@GetMapping(value = "/search/filterBy")
 	public Object search(@RequestParam("q") String search_query, @RequestParam("filter") String filter)
 			throws InvalidInputException {
@@ -60,9 +61,9 @@ public class SearchController extends GlobalController {
 					throw new InvalidInputException(EMPTY_FILTER);
 				}
 				List<Searchable> result = new ArrayList<>();
-
+				
 				if (myFilter.getSearchType() == SearchType.USER) { // Sort Only Users
-					result.addAll(userDao.getByFullNameLike(search_query));
+					result.addAll(userRepository.findAllByFullNameContaining(search_query));
 				} else if (myFilter.getSearchType() == SearchType.PLAYLIST) { //Sort Only Playlists
 					result.addAll(playlistRepository.findAllByPlaylistName(search_query));
 				} else {
@@ -79,9 +80,9 @@ public class SearchController extends GlobalController {
 		} else {
 			throw new InvalidInputException(EMPTY_SEARCH);
 		}
-
+		
 	}
-
+	
 	private List<Video> getFilteredVideos(String search_query, Filter filter) throws InvalidInputException {
 		if (filter == Filter.DATE_OF_UPLOAD) {
 			List<Video> videos = videoRepository.findAllByTitleContaining(search_query);
@@ -109,7 +110,7 @@ public class SearchController extends GlobalController {
 		}
 		throw new InvalidInputException(EMPTY_FILTER);
 	}
-
+	
 	private Filter getFilter(String filterType) {
 		Filter[] allFilters = Filter.values();
 		for (int i = 0; i < allFilters.length; i++) {

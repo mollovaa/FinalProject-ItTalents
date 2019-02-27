@@ -1,7 +1,5 @@
 package ittalents.javaee1.models;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import ittalents.javaee1.models.search.SearchType;
 import ittalents.javaee1.models.search.Searchable;
@@ -26,7 +24,7 @@ public class User implements Searchable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long userId;
     private int age;
-    private String full_name;
+    private String fullName;
     private String username;
     private String password;
     private String email;
@@ -87,10 +85,23 @@ public class User implements Searchable {
 
     @OneToMany(mappedBy = "uploader")
     private List<Video> videos = new ArrayList<>();
-
-    public User(int age, String full_name, String username, String password, String email) {
+    
+    @ManyToMany(cascade = {CascadeType.ALL})
+    @JoinTable(
+            name = "subscriptions",
+            joinColumns = {@JoinColumn(name = "subscriber_id")},
+            inverseJoinColumns = {@JoinColumn(name = "subscribed_to_id")}
+    )
+    private List<User> subscribedToUsers = new ArrayList<>();
+    
+    @JsonIgnore
+    @ManyToMany(mappedBy = "subscribedToUsers")
+    private List<User> mySubscribers = new ArrayList<>();
+    
+    
+    public User(int age, String fullName, String username, String password, String email) {
         this.age = age;
-        this.full_name = full_name;
+        this.fullName = fullName;
         this.username = username;
         this.password = password;
         this.email = email;

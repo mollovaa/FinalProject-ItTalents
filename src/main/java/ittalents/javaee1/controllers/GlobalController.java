@@ -44,7 +44,7 @@ public abstract class GlobalController {
     @ResponseBody
     public ErrorMessage handleEmptyJsonBody(Exception e) {
         logger.error(e.getMessage(), e);
-        return new ErrorMessage(e.getMessage(), HttpStatus.UNAUTHORIZED.value(), LocalDateTime.now());
+        return new ErrorMessage(e.getMessage(), HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
     }
 
     @ExceptionHandler({BadRequestException.class})
