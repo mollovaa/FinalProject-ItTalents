@@ -10,15 +10,16 @@ import ittalents.javaee1.models.dao.UserDao;
 import ittalents.javaee1.models.dto.UserLoginDTO;
 import ittalents.javaee1.models.dto.UserRegisterDTO;
 import ittalents.javaee1.models.dto.UserSessionDTO;
+import ittalents.javaee1.util.MailManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.mail.MessagingException;
 import javax.servlet.http.HttpSession;
 
 @RestController
 public class UserController extends GlobalController {
 	private static final String SUCCESSFUL_REGISTRATION = "{\"msg\" : \"You have successfully registered!\"}";
-	private static final String SUCCESSFUL_LOG_IN = "{\"msg\" : \"You have successfully logged in!\"}";
 	private static final String SUCCESSFUL_LOG_OUT = "{\"msg\" : \"You have successfully logged out!\"}";
 	private static final String SUBSCRIBED = "{\"msg\" : \"Subscribed!\"}";
 	private static final String UNSUBSCRIBED = "{\"msg\" : \"Unsubscribed!\"}";
@@ -66,7 +67,7 @@ public class UserController extends GlobalController {
 	}
 	
 	@GetMapping(value = "/subscribe/{id}")
-	public Object subscribeTo(HttpSession session, @PathVariable("id") long id) throws BadRequestException {
+	public Object subscribeTo(HttpSession session, @PathVariable("id") long id) throws BadRequestException, MessagingException {
 		
 		if (SessionManager.isLogged(session)) {
 			if (userDao.getById(id) != null) {  // user we are subscribing to exists
