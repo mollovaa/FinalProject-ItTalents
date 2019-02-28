@@ -19,6 +19,7 @@ import static ittalents.javaee1.controllers.MyResponse.*;
 
 
 @RestController
+@RequestMapping(value = "/playlists")
 public class PlaylistController extends GlobalController {
 
     private void validatePlaylist(Playlist playlist) throws InvalidInputException {
@@ -27,7 +28,7 @@ public class PlaylistController extends GlobalController {
         }
     }
 
-    @GetMapping(value = "playlist/showPlaylist/{playlistId}")
+    @GetMapping(value = "/{playlistId}/show")
     @ResponseBody
     public Object showPlaylist(@PathVariable long playlistId) throws PlaylistNotFoundException {
         if (playlistRepository.existsById(playlistId)) {
@@ -36,7 +37,7 @@ public class PlaylistController extends GlobalController {
         throw new PlaylistNotFoundException();
     }
 
-    @PostMapping(value = "playlist/createPlaylist")
+    @PostMapping(value = "/add")
     public Object addPlaylist(@RequestBody Playlist playlist, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
@@ -46,7 +47,7 @@ public class PlaylistController extends GlobalController {
         return playlistRepository.save(playlist);
     }
 
-    @GetMapping(value = "playlist/removePlaylist/{playlistId}")
+    @DeleteMapping(value = "/{playlistId}/remove")
     public Object removePlaylist(@PathVariable long playlistId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
@@ -64,7 +65,7 @@ public class PlaylistController extends GlobalController {
         return new ErrorMessage(SUCCESSFULLY_REMOVED_PLAYLIST, HttpStatus.OK.value(), LocalDateTime.now());
     }
 
-    @GetMapping(value = "playlist/addVideoToPlaylist/{playlistId}/{videoId}")
+    @PutMapping(value = "/{playlistId}/videos/{videoId}/add")
     public Object addVideoToPlaylist(@PathVariable long playlistId, @PathVariable long videoId, HttpSession session)
             throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
@@ -90,7 +91,7 @@ public class PlaylistController extends GlobalController {
         return playlistRepository.save(playlist);
     }
 
-    @GetMapping(value = "playlist/removeVideoFromPlaylist/{playlistId}/{videoId}")
+    @PutMapping(value = "/{playlistId}/videos/{videoId}/remove")
     public Object removeVideoFromPlaylist(@PathVariable long playlistId, @PathVariable long videoId,
                                           HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
