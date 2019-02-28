@@ -47,7 +47,6 @@ public class User implements Searchable {
             joinColumns = {@JoinColumn(name = "user_id")},
             inverseJoinColumns = {@JoinColumn(name = "disliked_video_id")}
     )
-
     private List<Video> dislikedVideos = new ArrayList<>();
 
     public void addDislikedVideo(Video video) {
@@ -83,6 +82,7 @@ public class User implements Searchable {
     @OneToMany(orphanRemoval = true)
     private List<Video> videos = new ArrayList<>();
 
+
     @ManyToMany(cascade = {CascadeType.ALL})
     @JoinTable(
             name = "subscriptions",
@@ -95,7 +95,7 @@ public class User implements Searchable {
     @ManyToMany(mappedBy = "subscribedToUsers")
     private List<User> mySubscribers = new ArrayList<>();
 
-    @OneToMany(orphanRemoval = true)
+    @OneToMany(mappedBy = "observerId", orphanRemoval = true)
     private List<Notification> notifications;
 
     public User(int age, String fullName, String username, String password, String email) {

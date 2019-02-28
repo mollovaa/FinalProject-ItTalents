@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import static ittalents.javaee1.controllers.MyResponse.*;
 
 @RestController
+@RequestMapping(value = "/comments")
 public class CommentController extends GlobalController {
 
     private String COMMENTED_VIDEO_BY = "Your video has been commented by ";
@@ -37,7 +38,7 @@ public class CommentController extends GlobalController {
         comment.setNumberOfLikes(0);
     }
 
-    @PostMapping(value = "comments/commentVideo/{videoId}")
+    @PostMapping(value = "/add/toVideo/{videoId}")
     public Object commentVideo(@RequestBody Comment comment, @PathVariable long videoId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
@@ -57,7 +58,7 @@ public class CommentController extends GlobalController {
         return commentRepository.save(comment);
     }
 
-    @PostMapping(value = "comments/responseToComment/{commentId}")
+    @PostMapping(value = "/{commentId}/response")
     public Object responseComment(@RequestBody Comment comment, @PathVariable long commentId, HttpSession session)
             throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
@@ -78,7 +79,7 @@ public class CommentController extends GlobalController {
         return commentRepository.save(comment);
     }
 
-    @GetMapping(value = "comments/likeComment/{commentId}")
+    @PutMapping(value = "/{commentId}/like")
     public Object likeVideo(@PathVariable long commentId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
@@ -106,7 +107,7 @@ public class CommentController extends GlobalController {
         return comment;
     }
 
-    @GetMapping(value = "comments/dislikeComment/{commentId}")
+    @PutMapping(value = "/{commentId}/dislike")
     public Object dislikeVideo(@PathVariable long commentId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
@@ -134,7 +135,7 @@ public class CommentController extends GlobalController {
         return comment;
     }
 
-    @GetMapping(value = "comments/removeComment/{commentId}")
+    @DeleteMapping(value = "/{commentId}/remove")
     public Object removeVideo(@PathVariable long commentId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
@@ -147,14 +148,7 @@ public class CommentController extends GlobalController {
         if (user.getUserId() != comment.getPublisherId()) {
             throw new AccessDeniedException();
         }
-        //comment.getResponses().stream().map(c->c.getBaseComment().)
-        //user.getComments().remove(comment);
-        //videoRepository.findById(comment.getVideoId()).get().getComments().remove(comment);
         commentRepository.delete(comment);
-        //  commentRepository.save(comment);
-
-       // System.out.println(commentRepository.existsById(commentId));
-
         return new ErrorMessage(SUCCESSFULLY_REMOVED_COMMENT, HttpStatus.OK.value(), LocalDateTime.now());
     }
 }

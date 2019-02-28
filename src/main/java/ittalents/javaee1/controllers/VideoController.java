@@ -2,15 +2,14 @@ package ittalents.javaee1.controllers;
 
 import ittalents.javaee1.exceptions.*;
 
-import ittalents.javaee1.hibernate.NotificationRepository;
-import ittalents.javaee1.hibernate.UserRepository;
-import ittalents.javaee1.hibernate.VideoRepository;
+
 import ittalents.javaee1.models.Notification;
 import ittalents.javaee1.models.User;
 import ittalents.javaee1.models.Video;
 import ittalents.javaee1.models.VideoCategory;
 import ittalents.javaee1.util.ErrorMessage;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import ittalents.javaee1.util.MailManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,33 +22,11 @@ import java.util.ArrayList;
 import static ittalents.javaee1.controllers.MyResponse.*;
 
 @RestController
+@RequestMapping(value = "/videos")
 public class VideoController extends GlobalController {
 
     private String ADDED_VIDEO_BY = "Video added by ";
-
-    @GetMapping(value = "showNotifications")     //only unread notifications
-    public Object[] showNotifications(HttpSession session) throws BadRequestException {
-        if (!SessionManager.isLogged(session)) {
-            throw new NotLoggedException();
-        }
-        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
-        if (user.getNotifications() == null || user.getNotifications().isEmpty()) {
-            throw new BadRequestException("No notifications");
-        }
-        ArrayList<Notification> result = new ArrayList<>();
-        for (Notification n : user.getNotifications()) {
-            if (!n.isRead()) {
-                result.add(n);
-                n.setRead(true);
-                notificationRepository.save(n);
-            }
-        }
-        if (result.isEmpty()) {
-            throw new BadRequestException("No unread notifications");
-        }
-        return result.toArray();
-    }
-
+    private String ADDED_VIDEO = "New video added!";
 
 
     private void validateVideo(Video video) throws InvalidInputException {
@@ -68,15 +45,23 @@ public class VideoController extends GlobalController {
         video.setNumberOfViews(0);
     }
 
-    @GetMapping(value = "videos/showVideo/{videoId}")
-    public Object showVideo(@PathVariable long videoId) throws VideoNotFoundException {
-        if (videoRepository.existsById(videoId)) {
-            return videoRepository.findById(videoId);
-        }
-        throw new VideoNotFoundException();
+    @GetMapping(value = "getUser")
+    public Object showUser(HttpSession session) throws BadRequestException {
+        return userRepository.findById(SessionManager.getLoggedUserId(session));
     }
 
-    @PostMapping(value = "videos/addVideo")
+    @GetMapping(value = "/{videoId}/play")
+    public Object showVideo(@PathVariable long videoId) throws VideoNotFoundException {
+        if (!videoRepository.existsById(videoId)) {
+            throw new VideoNotFoundException();
+        }
+        Video video = videoRepository.findById(videoId).get();    //todo add to watch_history
+        video.setNumberOfViews(video.getNumberOfViews() + 1);
+        videoRepository.save(video);
+        return video;
+    }
+
+    @PostMapping(value = "/add")
     public Object addVideo(@RequestBody Video video, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
@@ -86,13 +71,14 @@ public class VideoController extends GlobalController {
         //notify all subscribers of current user:
         User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
         for (User u : user.getMySubscribers()) {
-            Notification notif = new Notification(ADDED_VIDEO_BY + u.getFullName(), u.getUserId());
+            Notification notif = new Notification(ADDED_VIDEO_BY + user.getFullName(), u.getUserId());
             notificationRepository.save(notif);
+            MailManager.sendEmail(u.getEmail(), ADDED_VIDEO, ADDED_VIDEO_BY + user.getFullName());
         }
         return videoRepository.save(video);
     }
 
-    @GetMapping(value = "videos/removeVideo/{videoId}")
+    @DeleteMapping(value = "/{videoId}/remove")
     public Object removeVideo(@PathVariable long videoId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
@@ -104,12 +90,12 @@ public class VideoController extends GlobalController {
         if (SessionManager.getLoggedUserId(session) != video.getUploaderId()) {
             throw new AccessDeniedException();
         }
-        videoRepository.deleteById(videoId);
+        videoRepository.delete(video);
         return new ErrorMessage(SUCCESSFULLY_REMOVED_VIDEO, HttpStatus.OK.value(), LocalDateTime.now());
     }
 
 
-    @GetMapping(value = "videos/likeVideo/{videoId}")
+    @PutMapping(value = "/{videoId}/like")
     public Object likeVideo(@PathVariable long videoId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
@@ -138,7 +124,7 @@ public class VideoController extends GlobalController {
     }
 
 
-    @GetMapping(value = "videos/dislikeVideo/{videoId}")
+    @PutMapping(value = "/{videoId}/dislike")
     public Object dislikeVideo(@PathVariable long videoId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();

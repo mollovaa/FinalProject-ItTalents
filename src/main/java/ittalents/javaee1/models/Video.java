@@ -45,7 +45,7 @@ public class Video implements Searchable {
     private List<Playlist> playlistContainingVideo = new ArrayList<>();
 
     @OneToMany(mappedBy = "videoId", orphanRemoval = true)
-    private List<Comment> comments = new ArrayList<>();
+    private List<Comment> comments = new ArrayList<>();   //todo show only those with response_to_id = null
 
 
     @Override
