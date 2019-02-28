@@ -4,7 +4,9 @@ import ittalents.javaee1.exceptions.InvalidInputException;
 import ittalents.javaee1.hibernate.PlaylistRepository;
 import ittalents.javaee1.hibernate.UserRepository;
 import ittalents.javaee1.hibernate.VideoRepository;
+import ittalents.javaee1.models.User;
 import ittalents.javaee1.models.Video;
+import ittalents.javaee1.models.dto.ViewProfileUserDTO;
 import ittalents.javaee1.models.search.Filter;
 import ittalents.javaee1.models.search.SearchType;
 import ittalents.javaee1.models.search.Searchable;
@@ -21,7 +23,7 @@ import java.util.List;
 
 @RestController
 public class SearchController extends GlobalController {
-	private static final String EMPTY_FILTER = "{\"error\" : \"Invalid filter option!\"}";
+	private static final String EMPTY_FILTER = "Invalid filter option!";
 	private static final String EMPTY_SEARCH = "{\"error\" : \"No matches found!\"}";
 	private static final int TWENTY_MINUTES_DURATION = 60 * 20;
 	private static final int FOUR_MINUTES_DURATION = 4 * 60;
@@ -37,7 +39,7 @@ public class SearchController extends GlobalController {
 	public Object search(@RequestParam("q") String search_query) throws InvalidInputException {
 		if (search_query != null && !search_query.isEmpty()) {
 			List<Searchable> result = new ArrayList<>();
-			result.addAll(userRepository.findAllByFullNameContaining(search_query));
+			result.addAll(getSearchedUsers(search_query));
 			result.addAll(videoRepository.findAllByTitleContaining(search_query));
 			result.addAll(playlistRepository.findAllByPlaylistName(search_query));
 			if (result.isEmpty()) {
@@ -51,7 +53,7 @@ public class SearchController extends GlobalController {
 		
 	}
 	
-	@GetMapping(value = "/search/filterBy")
+	@GetMapping(value = "/search/filters")
 	public Object search(@RequestParam("q") String search_query, @RequestParam("filter") String filter)
 			throws InvalidInputException {
 		if (search_query != null && !search_query.isEmpty()) {
@@ -63,7 +65,7 @@ public class SearchController extends GlobalController {
 				List<Searchable> result = new ArrayList<>();
 				
 				if (myFilter.getSearchType() == SearchType.USER) { // Sort Only Users
-					result.addAll(userRepository.findAllByFullNameContaining(search_query));
+					result.addAll(getSearchedUsers(search_query));
 				} else if (myFilter.getSearchType() == SearchType.PLAYLIST) { //Sort Only Playlists
 					result.addAll(playlistRepository.findAllByPlaylistName(search_query));
 				} else {
@@ -82,7 +84,20 @@ public class SearchController extends GlobalController {
 		}
 		
 	}
-	
+	private List<ViewProfileUserDTO> getSearchedUsers(String search_query){
+		List<User> users = userRepository.findAllByFullNameContaining(search_query);
+		List<ViewProfileUserDTO> searchUsers = new ArrayList<>();
+		for (User user : users) {
+			searchUsers.add(new ViewProfileUserDTO(
+					user.getUserId(),
+					user.getMySubscribers().size(),
+					user.getFullName(),
+					user.getVideos(),
+					user.getPlaylists()
+			));
+		}
+		return searchUsers;
+	}
 	private List<Video> getFilteredVideos(String search_query, Filter filter) throws InvalidInputException {
 		if (filter == Filter.DATE_OF_UPLOAD) {
 			List<Video> videos = videoRepository.findAllByTitleContaining(search_query);

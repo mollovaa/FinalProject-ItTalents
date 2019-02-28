@@ -1,6 +1,7 @@
 package ittalents.javaee1.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import ittalents.javaee1.models.search.SearchType;
 import ittalents.javaee1.models.search.Searchable;
 import lombok.AllArgsConstructor;
@@ -26,6 +27,7 @@ public class User implements Searchable {
     private int age;
     private String fullName;
     private String username;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
     private String email;
 
@@ -40,6 +42,7 @@ public class User implements Searchable {
     public void addLikedVideo(Video video) {
         this.likedVideos.add(video);
     }
+
 
     @ManyToMany(cascade = {CascadeType.ALL})
     @JoinTable(
@@ -60,6 +63,7 @@ public class User implements Searchable {
             joinColumns = {@JoinColumn(name = "user_id")},
             inverseJoinColumns = {@JoinColumn(name = "liked_comment_id")}
     )
+
     private List<Comment> likedComments = new ArrayList<>();
 
     public void addLikedComment(Comment comment) {
@@ -74,15 +78,15 @@ public class User implements Searchable {
     )
     private List<Comment> dislikedComments = new ArrayList<>();
 
-    @OneToMany(orphanRemoval = true)
+    @OneToMany(mappedBy = "publisherId",orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();
 
-    @OneToMany(orphanRemoval = true)
+    @OneToMany(mappedBy = "ownerId",orphanRemoval = true)
     private List<Playlist> playlists = new ArrayList<>();
 
-    @OneToMany(orphanRemoval = true)
+    @OneToMany(mappedBy = "uploaderId",orphanRemoval = true)
     private List<Video> videos = new ArrayList<>();
-
+    
     @ManyToMany(cascade = {CascadeType.ALL})
     @JoinTable(
             name = "subscriptions",
@@ -90,12 +94,12 @@ public class User implements Searchable {
             inverseJoinColumns = {@JoinColumn(name = "subscribed_to_id")}
     )
     private List<User> subscribedToUsers = new ArrayList<>();
-
+    
     @JsonIgnore
     @ManyToMany(mappedBy = "subscribedToUsers")
     private List<User> mySubscribers = new ArrayList<>();
-
-    @OneToMany(orphanRemoval = true)
+    
+    @OneToMany(mappedBy = "observerId", orphanRemoval = true)
     private List<Notification> notifications;
 
     public User(int age, String fullName, String username, String password, String email) {

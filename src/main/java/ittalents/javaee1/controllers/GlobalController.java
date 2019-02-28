@@ -12,7 +12,9 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 
 import javax.servlet.http.HttpSession;
@@ -20,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 
 @RestController
+@RequestMapping(produces = "application/json")
 public abstract class GlobalController {
 
     @Autowired
@@ -42,7 +45,8 @@ public abstract class GlobalController {
         logger.error(e.getMessage(), e);
         return new ErrorMessage(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), LocalDateTime.now());
     }
-
+    
+   
     @ExceptionHandler({NotLoggedException.class})
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     @ResponseBody
@@ -51,19 +55,14 @@ public abstract class GlobalController {
         return new ErrorMessage(e.getMessage(), HttpStatus.UNAUTHORIZED.value(), LocalDateTime.now());
     }
 
-    @ExceptionHandler({HttpMessageNotReadableException.class})
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ResponseBody
-    public ErrorMessage handleEmptyJsonBody(Exception e) {
-        logger.error(e.getMessage(), e);
-        return new ErrorMessage(e.getMessage(), HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
-    }
-
-    @ExceptionHandler({BadRequestException.class})
+    @ExceptionHandler({BadRequestException.class,
+            MissingServletRequestParameterException.class,
+            HttpMessageNotReadableException.class,
+            MethodArgumentTypeMismatchException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ResponseBody
     public ErrorMessage handleOwnException(Exception e) {
-        logger.error(e.getMessage());
+        logger.error(e.getMessage(),e);
         return new ErrorMessage(e.getMessage(), HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
     }
 

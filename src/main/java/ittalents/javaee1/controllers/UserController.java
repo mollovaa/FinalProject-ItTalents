@@ -1,5 +1,6 @@
 package ittalents.javaee1.controllers;
 
+import com.amazonaws.services.dynamodbv2.xspec.N;
 import ittalents.javaee1.exceptions.BadRequestException;
 import ittalents.javaee1.exceptions.InvalidInputException;
 import ittalents.javaee1.exceptions.InvalidJsonBodyException;
@@ -10,6 +11,7 @@ import ittalents.javaee1.util.CryptWithMD5;
 import ittalents.javaee1.models.dto.UserLoginDTO;
 import ittalents.javaee1.models.dto.UserRegisterDTO;
 import ittalents.javaee1.models.dto.UserSessionDTO;
+import ittalents.javaee1.models.dto.ViewProfileUserDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +24,7 @@ public class UserController extends GlobalController {
 	private static final String SUCCESSFUL_LOG_OUT = "{\"msg\" : \"You have successfully logged out!\"}";
 	private static final String SUBSCRIBED = "{\"msg\" : \"Subscribed!\"}";
 	private static final String UNSUBSCRIBED = "{\"msg\" : \"Unsubscribed!\"}";
+	private static final String ACCOUNT_DELETED = "{\"msg\" : \"Unsubscribed!\"}";
 	private static final String WRONG_CREDENTIALS = "Invalid Username or Password";
 	private static final String EXISTING_EMAIL = "Email already exists!";
 	private static final String EXISTING_USERNAME = "Username already exists!";
@@ -33,12 +36,14 @@ public class UserController extends GlobalController {
 	private static final String ALREADY_SUBSCRIBED = "You are already subscribed.";
 	private static final String INVALID_USER = "Invalid user!";
 	private static final String INVALID_JSON_BODY = "Invalid Json Body!";
+	public static final String INCORRECT_PASSWORD = "Incorrect password!";
+	public static final String MSG_PASSWORD_CHANGED = "{\"msg\" : \"Password changed!\"}";
 	
 	
 	@Autowired
 	private UserRepository userRepository;
 	
-	@GetMapping(value = "/logout")
+	@PostMapping(value = "/logout")
 	public Object logout(HttpSession session) throws BadRequestException {
 		if (SessionManager.isLogged(session)) {
 			session.invalidate();
@@ -47,7 +52,64 @@ public class UserController extends GlobalController {
 		throw new NotLoggedException();
 	}
 	
-	@GetMapping(value = "/unsubscribe/{id}")
+	@GetMapping(value = "/profile")
+	public Object viewMyProfile(HttpSession session) throws NotLoggedException {
+		if (SessionManager.isLogged(session)) {
+			return userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+		} else {
+			throw new NotLoggedException();
+		}
+	}
+	
+	@GetMapping(value = "/view/profile/{id}")
+	public Object viewProfile(@PathVariable("id") long id) throws InvalidInputException {
+		if (userRepository.existsById(id)) {
+			User user = userRepository.findById(id).get();
+			return new ViewProfileUserDTO(
+					user.getUserId(),
+					user.getMySubscribers().size(),
+					user.getFullName(),
+					user.getVideos(),
+					user.getPlaylists()
+			);
+		} else {
+			throw new InvalidInputException(INVALID_USER);
+		}
+	}
+	@DeleteMapping(value = "/profile/delete-account")
+	public Object deleteProfile(@RequestParam String password, HttpSession session) throws BadRequestException {
+		if(password == null) {
+			throw new InvalidInputException(INCORRECT_PASSWORD);
+		}
+		if (SessionManager.isLogged(session)) {
+			User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+			if(!CryptWithMD5.cryptWithMD5(password).equals(user.getPassword())) {
+				throw new InvalidInputException(INCORRECT_PASSWORD);
+			}
+				logout(session);
+				userRepository.deleteById(user.getUserId());
+				return ACCOUNT_DELETED;
+			
+		} else {
+			throw new NotLoggedException();
+		}
+	}
+	@PutMapping(value = "/profile/edit/password")
+	public Object deleteProfile(@RequestParam String oldPassword,
+								@RequestParam String newPassword,HttpSession session)throws BadRequestException{
+		if (SessionManager.isLogged(session)) {
+			User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+			if(!CryptWithMD5.cryptWithMD5(oldPassword).equals(user.getPassword())) {
+				throw new InvalidInputException(INCORRECT_PASSWORD);
+			}
+			user.setPassword(CryptWithMD5.cryptWithMD5(newPassword));
+			return MSG_PASSWORD_CHANGED;
+			
+		} else {
+			throw new NotLoggedException();
+		}
+	}
+	@DeleteMapping(value = "/unsubscribe/{id}")
 	public Object unSubscribeFrom(HttpSession session, @PathVariable("id") long id) throws BadRequestException {
 		
 		if (SessionManager.isLogged(session)) {
@@ -70,7 +132,7 @@ public class UserController extends GlobalController {
 		throw new NotLoggedException();
 	}
 	
-	@GetMapping(value = "/subscribe/{id}")
+	@PostMapping(value = "/subscribe/{id}")
 	public Object subscribeTo(HttpSession session, @PathVariable("id") long id) throws BadRequestException, MessagingException {
 		
 		if (SessionManager.isLogged(session)) {
