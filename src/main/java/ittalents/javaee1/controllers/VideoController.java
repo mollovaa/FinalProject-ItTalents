@@ -3,13 +3,12 @@ package ittalents.javaee1.controllers;
 import ittalents.javaee1.exceptions.*;
 
 
-import ittalents.javaee1.models.Notification;
-import ittalents.javaee1.models.User;
-import ittalents.javaee1.models.Video;
-import ittalents.javaee1.models.VideoCategory;
+import ittalents.javaee1.hibernate.WatchHistoryRepository;
+import ittalents.javaee1.models.*;
 import ittalents.javaee1.util.ErrorMessage;
 
 import ittalents.javaee1.util.MailManager;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,16 +26,22 @@ public class VideoController extends GlobalController {
 
     private String ADDED_VIDEO_BY = "Video added by ";
     private String ADDED_VIDEO = "New video added!";
+    private String INVALID_VIDEO_DESCRIPTION = "Invalid description";
 
+    @Autowired
+    WatchHistoryRepository watchHistoryRepository;
 
     private void validateVideo(Video video) throws InvalidInputException {
-        if (video.getTitle() == null || video.getTitle().isEmpty()) {
+        if (!isValidString(video.getTitle())) {
             throw new InvalidInputException(INVALID_VIDEO_TITLE);
+        }
+        if (!isValidString(video.getDescription())) {
+            throw new InvalidInputException(INVALID_VIDEO_DESCRIPTION);
         }
         if (video.getDuration() <= 0) {
             throw new InvalidInputException(INVALID_VIDEO_DURATION);
         }
-        if (!VideoCategory.contains(video.getCategory())) {
+        if (!isValidString(video.getCategory()) || (!VideoCategory.contains(video.getCategory()))) {
             throw new InvalidInputException(INVALID_VIDEO_CATEGORY);
         }
         video.setUploadDate(LocalDate.now());
@@ -45,19 +50,21 @@ public class VideoController extends GlobalController {
         video.setNumberOfViews(0);
     }
 
-    @GetMapping(value = "getUser")
-    public Object showUser(HttpSession session) throws BadRequestException {
-        return userRepository.findById(SessionManager.getLoggedUserId(session));
-    }
-
-    @GetMapping(value = "/{videoId}/play")
-    public Object showVideo(@PathVariable long videoId) throws VideoNotFoundException {
+    @GetMapping(value = "/{videoId}/show")
+    public Object showVideo(@PathVariable long videoId, HttpSession session) throws BadRequestException {
         if (!videoRepository.existsById(videoId)) {
             throw new VideoNotFoundException();
         }
-        Video video = videoRepository.findById(videoId).get();    //todo add to watch_history
+        Video video = videoRepository.findById(videoId).get();
         video.setNumberOfViews(video.getNumberOfViews() + 1);
         videoRepository.save(video);
+        if (SessionManager.isLogged(session)) {
+            User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+            if (!watchHistoryRepository.existsByVideoAndUser(video, user)) {
+                WatchHistory historyRecord = new WatchHistory(user, video);
+                watchHistoryRepository.save(historyRecord);
+            }
+        }
         return video;
     }
 
@@ -122,7 +129,6 @@ public class VideoController extends GlobalController {
         userRepository.save(user);
         return video;
     }
-
 
     @PutMapping(value = "/{videoId}/dislike")
     public Object dislikeVideo(@PathVariable long videoId, HttpSession session) throws BadRequestException {

@@ -11,7 +11,9 @@ import lombok.Setter;
 
 import javax.persistence.*;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -42,7 +44,6 @@ public class User implements Searchable {
     public void addLikedVideo(Video video) {
         this.likedVideos.add(video);
     }
-
 
     @ManyToMany(cascade = {CascadeType.ALL})
     @JoinTable(
@@ -76,16 +77,16 @@ public class User implements Searchable {
     )
     private List<Comment> dislikedComments = new ArrayList<>();
 
-    @OneToMany(mappedBy = "publisherId",orphanRemoval = true)
+    @OneToMany(mappedBy = "publisherId", orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();
 
-    @OneToMany(mappedBy = "ownerId",orphanRemoval = true)
+    @OneToMany(mappedBy = "ownerId", orphanRemoval = true)
     private List<Playlist> playlists = new ArrayList<>();
 
-    @OneToMany(mappedBy = "uploaderId",orphanRemoval = true)
+    @OneToMany(mappedBy = "uploaderId", orphanRemoval = true)
     private List<Video> videos = new ArrayList<>();
-	
-	
+
+
     @ManyToMany(cascade = {CascadeType.ALL})
     @JoinTable(
             name = "subscriptions",
@@ -93,13 +94,17 @@ public class User implements Searchable {
             inverseJoinColumns = {@JoinColumn(name = "subscribed_to_id")}
     )
     private List<User> subscribedToUsers = new ArrayList<>();
-	
-	@JsonIgnore
+
+    @JsonIgnore
     @ManyToMany(mappedBy = "subscribedToUsers")
     private List<User> mySubscribers = new ArrayList<>();
 
     @OneToMany(mappedBy = "observerId", orphanRemoval = true)
     private List<Notification> notifications;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "user", orphanRemoval = true)
+    Set<WatchHistory> watchHistorySet = new HashSet<>();
 
     public User(int age, String fullName, String username, String password, String email) {
         this.age = age;

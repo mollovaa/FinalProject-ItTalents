@@ -41,7 +41,7 @@ public class NotificationController extends GlobalController {
         return result.toArray();
     }
 
-    @GetMapping(value = "/all")//todo make unread->read and save
+    @GetMapping(value = "/all")
     public Object[] showAllNotifications(HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();

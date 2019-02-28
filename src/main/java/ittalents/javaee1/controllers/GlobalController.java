@@ -35,6 +35,8 @@ public abstract class GlobalController {
     CommentRepository commentRepository;
     @Autowired
     PlaylistRepository playlistRepository;
+    @Autowired
+    WatchHistoryRepository watchHistoryRepository;
 
     private static Logger logger = LogManager.getLogger(GlobalController.class);
 
@@ -45,8 +47,8 @@ public abstract class GlobalController {
         logger.error(e.getMessage(), e);
         return new ErrorMessage(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), LocalDateTime.now());
     }
-    
-   
+
+
     @ExceptionHandler({NotLoggedException.class})
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     @ResponseBody
@@ -62,8 +64,12 @@ public abstract class GlobalController {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ResponseBody
     public ErrorMessage handleOwnException(Exception e) {
-        logger.error(e.getMessage(),e);
+        logger.error(e.getMessage(), e);
         return new ErrorMessage(e.getMessage(), HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+    }
+
+    boolean isValidString(String text) {
+        return text != null && !text.isEmpty();
     }
 
 

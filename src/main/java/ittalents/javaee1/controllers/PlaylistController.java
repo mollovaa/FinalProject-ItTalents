@@ -23,7 +23,7 @@ import static ittalents.javaee1.controllers.MyResponse.*;
 public class PlaylistController extends GlobalController {
 
     private void validatePlaylist(Playlist playlist) throws InvalidInputException {
-        if (playlist.getPlaylistName() == null || playlist.getPlaylistName().isEmpty()) {
+        if (!isValidString(playlist.getPlaylistName())) {
             throw new InvalidInputException("Invalid playlist name!");
         }
     }

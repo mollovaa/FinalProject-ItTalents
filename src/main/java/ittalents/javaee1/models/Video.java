@@ -8,7 +8,9 @@ import lombok.*;
 import javax.persistence.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 
 @Getter
@@ -47,6 +49,9 @@ public class Video implements Searchable {
     @OneToMany(mappedBy = "videoId", orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();   //todo show only those with response_to_id = null
 
+    @JsonIgnore
+    @OneToMany(mappedBy = "video", orphanRemoval = true)
+    Set<WatchHistory> watchHistorySet = new HashSet<>();
 
     @Override
     public SearchType getType() {

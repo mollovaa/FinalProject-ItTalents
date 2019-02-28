@@ -30,7 +30,7 @@ public class CommentController extends GlobalController {
     private String RESPONSED_TO_COMMENT = " responsed to your comment";
 
     private void validateComment(Comment comment) throws InvalidInputException {
-        if (comment.getMessage() == null || comment.getMessage().isEmpty()) {
+        if (!isValidString(comment.getMessage())) {
             throw new InvalidInputException(INVALID_COMMENT_MESSAGE);
         }
         comment.setDateOfPublication(LocalDate.now());
