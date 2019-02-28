@@ -2,8 +2,10 @@ package ittalents.javaee1.controllers;
 
 import ittalents.javaee1.exceptions.*;
 
+import ittalents.javaee1.hibernate.NotificationRepository;
 import ittalents.javaee1.hibernate.UserRepository;
 import ittalents.javaee1.hibernate.VideoRepository;
+import ittalents.javaee1.models.Notification;
 import ittalents.javaee1.models.User;
 import ittalents.javaee1.models.Video;
 import ittalents.javaee1.models.VideoCategory;
@@ -12,20 +14,43 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+
 
 import static ittalents.javaee1.controllers.MyResponse.*;
 
 @RestController
 public class VideoController extends GlobalController {
 
-    @Autowired
-    VideoRepository videoRepository;
-    @Autowired
-    UserRepository userRepository;
+    private String ADDED_VIDEO_BY = "Video added by ";
+
+    @GetMapping(value = "showNotifications")     //only unread notifications
+    public Object[] showNotifications(HttpSession session) throws BadRequestException {
+        if (!SessionManager.isLogged(session)) {
+            throw new NotLoggedException();
+        }
+        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        if (user.getNotifications() == null || user.getNotifications().isEmpty()) {
+            throw new BadRequestException("No notifications");
+        }
+        ArrayList<Notification> result = new ArrayList<>();
+        for (Notification n : user.getNotifications()) {
+            if (!n.isRead()) {
+                result.add(n);
+                n.setRead(true);
+                notificationRepository.save(n);
+            }
+        }
+        if (result.isEmpty()) {
+            throw new BadRequestException("No unread notifications");
+        }
+        return result.toArray();
+    }
+
+
 
     private void validateVideo(Video video) throws InvalidInputException {
         if (video.getTitle() == null || video.getTitle().isEmpty()) {
@@ -58,6 +83,12 @@ public class VideoController extends GlobalController {
         }
         this.validateVideo(video);
         video.setUploaderId(SessionManager.getLoggedUserId(session));
+        //notify all subscribers of current user:
+        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        for (User u : user.getMySubscribers()) {
+            Notification notif = new Notification(ADDED_VIDEO_BY + u.getFullName(), u.getUserId());
+            notificationRepository.save(notif);
+        }
         return videoRepository.save(video);
     }
 

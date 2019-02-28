@@ -16,7 +16,7 @@ import java.util.Properties;
 public class MailManager {
 	private static Logger logger = LogManager.getLogger(MailManager.class);
 	public static void sendEmail(String emailTo,String subject, String content) throws MessagingException {
-		
+
 		new Thread(()-> {
 			try {
 				sendmail(emailTo,subject,content);

@@ -25,7 +25,7 @@ public class Comment {
     private LocalDate dateOfPublication;
     private int numberOfLikes;
     private int numberOfDislikes;
-    private long publisherId;     //todo one to many
+    private long publisherId;
     private Long responseToId;
     private long videoId;
 
@@ -37,24 +37,9 @@ public class Comment {
     @ManyToMany(mappedBy = "dislikedComments")
     private List<User> usersDislikedComment = new ArrayList<>();
 
-    @JsonIgnore
-    @ManyToOne(cascade = {CascadeType.ALL})
-    @JoinColumn(name = "responseToId", insertable = false, updatable = false)   //!!!
-    private Comment baseComment;
-
-
-    @OneToMany(mappedBy = "baseComment")
+    @OneToMany(mappedBy = "responseToId", cascade = {CascadeType.ALL}, orphanRemoval = true)
     private List<Comment> responses = new ArrayList<>();
 
-    @JsonIgnore
-    @ManyToOne(cascade = {CascadeType.ALL})
-    @JoinColumn(name = "videoId", insertable = false, updatable = false)   //!!!
-    private Video commentedVideo;
-
-    @JsonIgnore
-    @ManyToOne(cascade = {CascadeType.ALL})
-    @JoinColumn(name = "publisherId", insertable = false, updatable = false)   //!!!
-    private User publisher;
 
 
 }

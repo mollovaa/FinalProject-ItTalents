@@ -3,9 +3,11 @@ package ittalents.javaee1.controllers;
 
 import ittalents.javaee1.exceptions.*;
 import ittalents.javaee1.hibernate.CommentRepository;
+import ittalents.javaee1.hibernate.NotificationRepository;
 import ittalents.javaee1.hibernate.UserRepository;
 import ittalents.javaee1.hibernate.VideoRepository;
 import ittalents.javaee1.models.Comment;
+import ittalents.javaee1.models.Notification;
 import ittalents.javaee1.models.User;
 
 import ittalents.javaee1.util.ErrorMessage;
@@ -23,12 +25,8 @@ import static ittalents.javaee1.controllers.MyResponse.*;
 @RestController
 public class CommentController extends GlobalController {
 
-    @Autowired
-    private CommentRepository commentRepository;
-    @Autowired
-    private VideoRepository videoRepository;
-    @Autowired
-    private UserRepository userRepository;
+    private String COMMENTED_VIDEO_BY = "Your video has been commented by ";
+    private String RESPONSED_TO_COMMENT = " responsed to your comment";
 
     private void validateComment(Comment comment) throws InvalidInputException {
         if (comment.getMessage() == null || comment.getMessage().isEmpty()) {
@@ -51,6 +49,11 @@ public class CommentController extends GlobalController {
         comment.setPublisherId(SessionManager.getLoggedUserId(session));
         comment.setVideoId(videoId);
         comment.setResponseToId(null);
+        //notify video`s owner
+        long uploaderId = videoRepository.findById(videoId).get().getUploaderId();
+        String writerName = userRepository.findById(SessionManager.getLoggedUserId(session)).get().getFullName();
+        Notification notif = new Notification(COMMENTED_VIDEO_BY + writerName, uploaderId);
+        notificationRepository.save(notif);
         return commentRepository.save(comment);
     }
 
@@ -67,6 +70,11 @@ public class CommentController extends GlobalController {
         comment.setPublisherId(SessionManager.getLoggedUserId(session));
         comment.setVideoId(commentRepository.findById(commentId).get().getVideoId());
         comment.setResponseToId(commentId);
+        //notify base comment`s owner
+        long commentOwnerId = commentRepository.findById(commentId).get().getPublisherId();
+        String writerName = userRepository.findById(SessionManager.getLoggedUserId(session)).get().getFullName();
+        Notification notif = new Notification(writerName + RESPONSED_TO_COMMENT, commentOwnerId);
+        notificationRepository.save(notif);
         return commentRepository.save(comment);
     }
 
@@ -139,7 +147,14 @@ public class CommentController extends GlobalController {
         if (user.getUserId() != comment.getPublisherId()) {
             throw new AccessDeniedException();
         }
-        commentRepository.deleteById(commentId);
+        //comment.getResponses().stream().map(c->c.getBaseComment().)
+        //user.getComments().remove(comment);
+        //videoRepository.findById(comment.getVideoId()).get().getComments().remove(comment);
+        commentRepository.delete(comment);
+        //  commentRepository.save(comment);
+
+       // System.out.println(commentRepository.existsById(commentId));
+
         return new ErrorMessage(SUCCESSFULLY_REMOVED_COMMENT, HttpStatus.OK.value(), LocalDateTime.now());
     }
 }

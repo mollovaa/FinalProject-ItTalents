@@ -44,13 +44,9 @@ public class Video implements Searchable {
     @ManyToMany(mappedBy = "videosInPlaylist")
     private List<Playlist> playlistContainingVideo = new ArrayList<>();
 
-    @OneToMany(mappedBy = "commentedVideo")
+    @OneToMany(mappedBy = "videoId", orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();
 
-    @JsonIgnore
-    @ManyToOne(cascade = {CascadeType.ALL})
-    @JoinColumn(name = "uploaderId", insertable = false, updatable = false)   //!!!
-    private User uploader;
 
     @Override
     public SearchType getType() {

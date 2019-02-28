@@ -6,7 +6,7 @@ import ittalents.javaee1.exceptions.InvalidJsonBodyException;
 import ittalents.javaee1.exceptions.NotLoggedException;
 import ittalents.javaee1.hibernate.UserRepository;
 import ittalents.javaee1.models.User;
-import ittalents.javaee1.models.dao.CryptWithMD5;
+import ittalents.javaee1.util.CryptWithMD5;
 import ittalents.javaee1.models.dto.UserLoginDTO;
 import ittalents.javaee1.models.dto.UserRegisterDTO;
 import ittalents.javaee1.models.dto.UserSessionDTO;

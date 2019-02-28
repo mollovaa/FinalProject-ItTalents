@@ -1,4 +1,4 @@
-package ittalents.javaee1.models.dao;
+package ittalents.javaee1.util;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

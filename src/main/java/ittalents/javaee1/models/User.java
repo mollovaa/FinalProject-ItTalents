@@ -29,8 +29,7 @@ public class User implements Searchable {
     private String password;
     private String email;
 
-
-    @ManyToMany(cascade = {CascadeType.REFRESH})
+    @ManyToMany(cascade = {CascadeType.ALL})
     @JoinTable(
             name = "liked_videos_by_users",
             joinColumns = {@JoinColumn(name = "user_id")},
@@ -41,7 +40,6 @@ public class User implements Searchable {
     public void addLikedVideo(Video video) {
         this.likedVideos.add(video);
     }
-
 
     @ManyToMany(cascade = {CascadeType.ALL})
     @JoinTable(
@@ -62,7 +60,6 @@ public class User implements Searchable {
             joinColumns = {@JoinColumn(name = "user_id")},
             inverseJoinColumns = {@JoinColumn(name = "liked_comment_id")}
     )
-
     private List<Comment> likedComments = new ArrayList<>();
 
     public void addLikedComment(Comment comment) {
@@ -77,15 +74,15 @@ public class User implements Searchable {
     )
     private List<Comment> dislikedComments = new ArrayList<>();
 
-    @OneToMany(mappedBy = "publisher")
+    @OneToMany(orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();
 
-    @OneToMany(mappedBy = "owner")
+    @OneToMany(orphanRemoval = true)
     private List<Playlist> playlists = new ArrayList<>();
 
-    @OneToMany(mappedBy = "uploader")
+    @OneToMany(orphanRemoval = true)
     private List<Video> videos = new ArrayList<>();
-    
+
     @ManyToMany(cascade = {CascadeType.ALL})
     @JoinTable(
             name = "subscriptions",
@@ -93,12 +90,14 @@ public class User implements Searchable {
             inverseJoinColumns = {@JoinColumn(name = "subscribed_to_id")}
     )
     private List<User> subscribedToUsers = new ArrayList<>();
-    
+
     @JsonIgnore
     @ManyToMany(mappedBy = "subscribedToUsers")
     private List<User> mySubscribers = new ArrayList<>();
-    
-    
+
+    @OneToMany(orphanRemoval = true)
+    private List<Notification> notifications;
+
     public User(int age, String fullName, String username, String password, String email) {
         this.age = age;
         this.fullName = fullName;

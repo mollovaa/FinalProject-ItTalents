@@ -21,11 +21,6 @@ import static ittalents.javaee1.controllers.MyResponse.*;
 @RestController
 public class PlaylistController extends GlobalController {
 
-    @Autowired
-    PlaylistRepository playlistRepository;
-    @Autowired
-    VideoRepository videoRepository;
-
     private void validatePlaylist(Playlist playlist) throws InvalidInputException {
         if (playlist.getPlaylistName() == null || playlist.getPlaylistName().isEmpty()) {
             throw new InvalidInputException("Invalid playlist name!");
@@ -63,7 +58,9 @@ public class PlaylistController extends GlobalController {
         if (SessionManager.getLoggedUserId(session) != playlist.getOwnerId()) {
             throw new AccessDeniedException();
         }
-        playlistRepository.delete(playlist);
+
+        playlistRepository.deleteById(playlistId);
+       // playlistRepository.delete(playlist);
         return new ErrorMessage(SUCCESSFULLY_REMOVED_PLAYLIST, HttpStatus.OK.value(), LocalDateTime.now());
     }
 

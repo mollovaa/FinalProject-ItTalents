@@ -26,19 +26,13 @@ public class Playlist implements Searchable {
     private String playlistName;
     private long ownerId;     //todo one to many
 
-
-    @ManyToMany(cascade = {CascadeType.REFRESH})
+    @ManyToMany
     @JoinTable(
             name = "playlists_videos",
             joinColumns = {@JoinColumn(name = "playlist_id")},
             inverseJoinColumns = {@JoinColumn(name = "video_id")}
     )
     private List<Video> videosInPlaylist = new ArrayList<>();
-
-    @JsonIgnore
-    @ManyToOne(cascade = {CascadeType.ALL})
-    @JoinColumn(name = "ownerId", insertable = false, updatable = false)   //!!!
-    private User owner;
 
     @Override
     public SearchType getType() {

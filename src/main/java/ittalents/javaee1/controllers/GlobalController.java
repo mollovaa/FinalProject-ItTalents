@@ -3,24 +3,36 @@ package ittalents.javaee1.controllers;
 import ittalents.javaee1.exceptions.BadRequestException;
 
 import ittalents.javaee1.exceptions.NotLoggedException;
+import ittalents.javaee1.hibernate.*;
+import ittalents.javaee1.models.Notification;
+import ittalents.javaee1.models.User;
 import ittalents.javaee1.util.ErrorMessage;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
-
-import javax.servlet.http.HttpServletResponse;
+import org.springframework.web.bind.annotation.*;
 
 
+import javax.servlet.http.HttpSession;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 
-import static ittalents.javaee1.controllers.MyResponse.EXPIRED_SESSION;
-import static ittalents.javaee1.controllers.MyResponse.SERVER_ERROR;
-
+@RestController
 public abstract class GlobalController {
+
+    @Autowired
+    NotificationRepository notificationRepository;
+    @Autowired
+    UserRepository userRepository;
+    @Autowired
+    VideoRepository videoRepository;
+    @Autowired
+    CommentRepository commentRepository;
+    @Autowired
+    PlaylistRepository playlistRepository;
+
     private static Logger logger = LogManager.getLogger(GlobalController.class);
 
     @ExceptionHandler({Exception.class})
