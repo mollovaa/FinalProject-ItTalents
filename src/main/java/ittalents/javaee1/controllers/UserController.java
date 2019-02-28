@@ -117,8 +117,8 @@ public class UserController extends GlobalController {
 				User unSubscribeFrom = userRepository.findById(id).get();//subscriber
 				User loggedUser = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
 				if (loggedUser.getMySubscribers().contains(unSubscribeFrom)) {
-					loggedUser.getMySubscribers().remove(unSubscribeFrom);
-					unSubscribeFrom.getSubscribedToUsers().remove(loggedUser);
+					loggedUser.getSubscribedToUsers().remove(unSubscribeFrom);
+					unSubscribeFrom.getMySubscribers().remove(loggedUser);
 					userRepository.save(loggedUser);
 					userRepository.save(unSubscribeFrom);
 					return UNSUBSCRIBED;
@@ -142,8 +142,8 @@ public class UserController extends GlobalController {
 				if (loggedUser.getMySubscribers().contains(subscribeTo)) { // already subbed
 					throw new InvalidInputException(ALREADY_SUBSCRIBED);
 				} else { // add subscription
-					loggedUser.getMySubscribers().add(subscribeTo);
-					subscribeTo.getSubscribedToUsers().add(loggedUser);
+					loggedUser.getSubscribedToUsers().add(subscribeTo);
+					subscribeTo.getMySubscribers().add(loggedUser);
 					userRepository.save(loggedUser);
 					userRepository.save(subscribeTo);
 					return SUBSCRIBED;

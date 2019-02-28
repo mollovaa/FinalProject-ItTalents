@@ -84,8 +84,8 @@ public class User implements Searchable {
 
     @OneToMany(mappedBy = "uploaderId",orphanRemoval = true)
     private List<Video> videos = new ArrayList<>();
-
-
+	
+	
     @ManyToMany(cascade = {CascadeType.ALL})
     @JoinTable(
             name = "subscriptions",
@@ -93,8 +93,8 @@ public class User implements Searchable {
             inverseJoinColumns = {@JoinColumn(name = "subscribed_to_id")}
     )
     private List<User> subscribedToUsers = new ArrayList<>();
-    
-    @JsonIgnore
+	
+	@JsonIgnore
     @ManyToMany(mappedBy = "subscribedToUsers")
     private List<User> mySubscribers = new ArrayList<>();
 
