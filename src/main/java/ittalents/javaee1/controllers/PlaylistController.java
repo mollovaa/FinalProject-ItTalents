@@ -1,26 +1,31 @@
 package ittalents.javaee1.controllers;
 
 import ittalents.javaee1.exceptions.*;
-import ittalents.javaee1.hibernate.PlaylistRepository;
-import ittalents.javaee1.hibernate.VideoRepository;
 import ittalents.javaee1.models.Playlist;
 import ittalents.javaee1.models.Video;
 
+import ittalents.javaee1.models.dto.VideoInPlaylistDTO;
+import ittalents.javaee1.models.dto.ViewPlaylistDTO;
+import ittalents.javaee1.models.dto.ViewVideoDTO;
 import ittalents.javaee1.util.ErrorMessage;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
-import static ittalents.javaee1.controllers.MyResponse.*;
 
 
 @RestController
 @RequestMapping(value = "/playlists")
 public class PlaylistController extends GlobalController {
+
+    private static final String VIDEO_NOT_IN_PLAYLIST = "You cannot remove a video from playlist as it is not in the playlist!";
+    private static final String VIDEO_ALREADY_ADDED_TO_PLAYLIST = "You have already added this video to playlist!";
+    private static final String SUCCESSFULLY_REMOVED_PLAYLIST = "You have successfully removed a playlist!";
 
     private void validatePlaylist(Playlist playlist) throws InvalidInputException {
         if (!isValidString(playlist.getPlaylistName())) {
@@ -28,13 +33,23 @@ public class PlaylistController extends GlobalController {
         }
     }
 
+    private ViewPlaylistDTO convertToPlaylistDTO(Playlist playlist) {
+        List<Video> videos = playlist.getVideosInPlaylist();
+        List<VideoInPlaylistDTO> videosToShow = new ArrayList<>();
+        for (Video v : videos) {
+            videosToShow.add(convertToVideoInPlaylistDTO(v));
+        }
+        return new ViewPlaylistDTO(playlist.getPlaylistId(), playlist.getPlaylistName(),
+                userRepository.findById(playlist.getOwnerId()).get().getFullName(), videosToShow);
+    }
+
     @GetMapping(value = "/{playlistId}/show")
     @ResponseBody
     public Object showPlaylist(@PathVariable long playlistId) throws PlaylistNotFoundException {
-        if (playlistRepository.existsById(playlistId)) {
-            return playlistRepository.findById(playlistId).get();
+        if (!playlistRepository.existsById(playlistId)) {
+            throw new PlaylistNotFoundException();
         }
-        throw new PlaylistNotFoundException();
+        return convertToPlaylistDTO(playlistRepository.findById(playlistId).get());
     }
 
     @PostMapping(value = "/add")
@@ -44,7 +59,7 @@ public class PlaylistController extends GlobalController {
         }
         validatePlaylist(playlist);
         playlist.setOwnerId(SessionManager.getLoggedUserId(session));
-        return playlistRepository.save(playlist);
+        return convertToPlaylistDTO(playlistRepository.save(playlist));
     }
 
     @DeleteMapping(value = "/{playlistId}/remove")
@@ -59,9 +74,7 @@ public class PlaylistController extends GlobalController {
         if (SessionManager.getLoggedUserId(session) != playlist.getOwnerId()) {
             throw new AccessDeniedException();
         }
-
         playlistRepository.deleteById(playlistId);
-       // playlistRepository.delete(playlist);
         return new ErrorMessage(SUCCESSFULLY_REMOVED_PLAYLIST, HttpStatus.OK.value(), LocalDateTime.now());
     }
 
@@ -88,7 +101,7 @@ public class PlaylistController extends GlobalController {
         playlist.getVideosInPlaylist().add(video);
         video.getPlaylistContainingVideo().add(playlist);
         videoRepository.save(video);
-        return playlistRepository.save(playlist);
+        return convertToPlaylistDTO(playlistRepository.save(playlist));
     }
 
     @PutMapping(value = "/{playlistId}/videos/{videoId}/remove")
@@ -114,7 +127,7 @@ public class PlaylistController extends GlobalController {
         playlist.getVideosInPlaylist().remove(video);
         video.getPlaylistContainingVideo().remove(playlist);
         videoRepository.save(video);
-        return playlistRepository.save(playlist);
+        return convertToPlaylistDTO(playlistRepository.save(playlist));
     }
 }
 

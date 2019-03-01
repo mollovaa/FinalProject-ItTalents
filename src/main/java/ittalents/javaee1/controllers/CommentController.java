@@ -2,16 +2,12 @@ package ittalents.javaee1.controllers;
 
 
 import ittalents.javaee1.exceptions.*;
-import ittalents.javaee1.hibernate.CommentRepository;
-import ittalents.javaee1.hibernate.NotificationRepository;
-import ittalents.javaee1.hibernate.UserRepository;
-import ittalents.javaee1.hibernate.VideoRepository;
 import ittalents.javaee1.models.Comment;
 import ittalents.javaee1.models.Notification;
 import ittalents.javaee1.models.User;
 
+import ittalents.javaee1.models.dto.ViewCommentDTO;
 import ittalents.javaee1.util.ErrorMessage;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,15 +15,20 @@ import javax.servlet.http.HttpSession;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-
-import static ittalents.javaee1.controllers.MyResponse.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @RestController
 @RequestMapping(value = "/comments")
 public class CommentController extends GlobalController {
 
-    private String COMMENTED_VIDEO_BY = "Your video has been commented by ";
-    private String RESPONSED_TO_COMMENT = " responsed to your comment";
+    private static final String COMMENTED_VIDEO_BY = "Your video has been commented by ";
+    private static final String RESPONSED_TO_COMMENT = " responsed to your comment";
+    private static final String NO_RESPONSES = "No responses!";
+    private static final String SUCCESSFULLY_REMOVED_COMMENT = "You have successfully removed a comment!";
+    private static final String ALREADY_DISLIKED_COMMENT = "You have already disliked this comment!";
+    private static final String INVALID_COMMENT_MESSAGE = "Invalid comment message!";
+    private static final String ALREADY_LIKED_COMMENT = "You have already liked this comment!";
 
     private void validateComment(Comment comment) throws InvalidInputException {
         if (!isValidString(comment.getMessage())) {
@@ -36,6 +37,23 @@ public class CommentController extends GlobalController {
         comment.setDateOfPublication(LocalDate.now());
         comment.setNumberOfDislikes(0);
         comment.setNumberOfLikes(0);
+    }
+
+    @GetMapping(value = "/{commentId}/responses/all")
+    public Object[] showAllResponsesOnComment(@PathVariable long commentId) throws BadRequestException {
+        if (!commentRepository.existsById(commentId)) {
+            throw new CommentNotFoundException();
+        }
+        Comment comment = commentRepository.findById(commentId).get();
+        List<Comment> responses = comment.getResponses();
+        if (responses.isEmpty()) {
+            throw new BadRequestException(NO_RESPONSES);
+        }
+        List<ViewCommentDTO> responsesToShow = new ArrayList<>();
+        for (Comment c : responses) {
+            responsesToShow.add(convertToCommentDTO(c));
+        }
+        return responsesToShow.toArray();
     }
 
     @PostMapping(value = "/add/toVideo/{videoId}")
@@ -55,7 +73,7 @@ public class CommentController extends GlobalController {
         String writerName = userRepository.findById(SessionManager.getLoggedUserId(session)).get().getFullName();
         Notification notif = new Notification(COMMENTED_VIDEO_BY + writerName, uploaderId);
         notificationRepository.save(notif);
-        return commentRepository.save(comment);
+        return convertToCommentDTO(commentRepository.save(comment));
     }
 
     @PostMapping(value = "/{commentId}/response")
@@ -76,7 +94,7 @@ public class CommentController extends GlobalController {
         String writerName = userRepository.findById(SessionManager.getLoggedUserId(session)).get().getFullName();
         Notification notif = new Notification(writerName + RESPONSED_TO_COMMENT, commentOwnerId);
         notificationRepository.save(notif);
-        return commentRepository.save(comment);
+        return convertToCommentDTO(commentRepository.save(comment));
     }
 
     @PutMapping(value = "/{commentId}/like")
@@ -104,7 +122,7 @@ public class CommentController extends GlobalController {
         comment.setNumberOfLikes(comment.getNumberOfLikes() + 1);
         commentRepository.save(comment);
         userRepository.save(user);
-        return comment;
+        return convertToCommentDTO(comment);
     }
 
     @PutMapping(value = "/{commentId}/dislike")
@@ -132,7 +150,7 @@ public class CommentController extends GlobalController {
         comment.setNumberOfDislikes(comment.getNumberOfDislikes() + 1);
         commentRepository.save(comment);
         userRepository.save(user);
-        return comment;
+        return convertToCommentDTO(comment);
     }
 
     @DeleteMapping(value = "/{commentId}/remove")

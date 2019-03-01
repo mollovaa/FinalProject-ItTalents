@@ -24,7 +24,7 @@ public class Playlist implements Searchable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long playlistId;
     private String playlistName;
-    private long ownerId;     //todo one to many
+    private long ownerId;
 
     @ManyToMany
     @JoinTable(
