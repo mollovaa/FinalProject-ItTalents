@@ -6,8 +6,6 @@ import ittalents.javaee1.exceptions.NotFoundException;
 import ittalents.javaee1.exceptions.NotLoggedException;
 import ittalents.javaee1.hibernate.*;
 import ittalents.javaee1.models.Comment;
-import ittalents.javaee1.models.Notification;
-import ittalents.javaee1.models.User;
 import ittalents.javaee1.models.Video;
 import ittalents.javaee1.models.dto.VideoInPlaylistDTO;
 import ittalents.javaee1.models.dto.ViewCommentDTO;
@@ -23,10 +21,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 
-import javax.servlet.http.HttpSession;
-import java.time.LocalDate;
+import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 
 @RestController
 @RequestMapping(produces = "application/json")
@@ -70,7 +66,15 @@ public abstract class GlobalController {
         logger.error(e.getMessage());
         return new ErrorMessage(e.getMessage(), HttpStatus.UNAUTHORIZED.value(), LocalDateTime.now());
     }
-
+    
+    @ExceptionHandler({IOException.class})
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseBody
+    public ErrorMessage handleNotFoundFiles(Exception e) {
+        logger.error(e.getMessage(), e);
+        return new ErrorMessage(e.getMessage(), HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+    }
+    
     @ExceptionHandler({BadRequestException.class,
             MissingServletRequestParameterException.class,
             HttpMessageNotReadableException.class,
