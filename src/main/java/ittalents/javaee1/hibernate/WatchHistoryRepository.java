@@ -14,4 +14,8 @@ public interface WatchHistoryRepository extends JpaRepository<WatchHistory, Long
 
     List<WatchHistory> getAllByUser(User user);
 
+    List<WatchHistory> getAllByUserOrderByDateAsc(User user);
+
+    List<WatchHistory> getAllByUserOrderByDateDesc(User user);
+
 }

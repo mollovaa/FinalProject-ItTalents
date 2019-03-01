@@ -1,12 +1,9 @@
 package ittalents.javaee1.controllers;
 
 import ittalents.javaee1.exceptions.*;
-
-
-import ittalents.javaee1.hibernate.WatchHistoryRepository;
 import ittalents.javaee1.models.*;
+import ittalents.javaee1.models.dto.ViewCommentDTO;
 import ittalents.javaee1.util.ErrorMessage;
-
 import ittalents.javaee1.util.MailManager;
 import ittalents.javaee1.util.StorageManager;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,24 +16,31 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
-
-import static ittalents.javaee1.controllers.MyResponse.*;
 
 @RestController
 @RequestMapping(value = "/videos")
 public class VideoController extends GlobalController {
+    //todo remove like/dislike
+    private static final String NO_COMMENTS = "No comments!";
+    private static final String ADDED_VIDEO_BY = "Video added by ";
+    private static final String ADDED_VIDEO = "New video added!";
+    private static final String INVALID_VIDEO_DESCRIPTION = "Invalid description";
+    private static final String SUCCESSFULLY_REMOVED_VIDEO = "You have successfully removed a video!";
+    private static final String ALREADY_LIKED_VIDEO = "You have already liked this video!";
+    private static final String ALREADY_DISLIKED_VIDEO = "You have already disliked this video!";
+    private static final String INVALID_VIDEO_TITLE = "Invalid title!";
+    private static final String INVALID_VIDEO_DURATION = "Invalid duration!";
+    private static final String INVALID_VIDEO_CATEGORY = "Invalid category!";
+
     
     public static final String EMPTY_VIDEO_STORAGE = "Empty video storage";
     public static final String ALREADY_UPLOADED = "Video is already uploaded!";
-    private String ADDED_VIDEO_BY = "Video added by ";
-    private String ADDED_VIDEO = "New video added!";
-    private String INVALID_VIDEO_DESCRIPTION = "Invalid description";
-
-    @Autowired
-    WatchHistoryRepository watchHistoryRepository;
-    @Autowired
-    StorageManager storageManager;
+   
+   @Autowired
+    private StorageManager storageManager;
     
     private void validateVideo(Video video) throws InvalidInputException {
         if (!isValidString(video.getTitle())) {
@@ -72,7 +76,25 @@ public class VideoController extends GlobalController {
                 watchHistoryRepository.save(historyRecord);
             }
         }
-        return video;
+        return this.convertToViewVideoDTO(video);
+    }
+
+    @GetMapping(value = "/{videoId}/comments/all")
+    public Object[] showVideoComments(@PathVariable long videoId) throws BadRequestException {
+        if (!videoRepository.existsById(videoId)) {
+            throw new VideoNotFoundException();
+        }
+        Video video = videoRepository.findById(videoId).get();
+        List<Comment> comments = video.getComments();   //need only comments , NOT responses
+        comments = comments.stream().filter(comment -> comment.getResponseToId() == null).collect(Collectors.toList());
+        if (comments.isEmpty()) {
+            throw new BadRequestException(NO_COMMENTS);
+        }
+        List<ViewCommentDTO> commentsToShow = new ArrayList<>();
+        for (Comment c : comments) {
+            commentsToShow.add(convertToCommentDTO(c));
+        }
+        return commentsToShow.toArray();
     }
     @GetMapping(value = "/{videoId}/download")
     public byte[] downloadVideo(@PathVariable long videoId) throws BadRequestException, IOException {
@@ -119,7 +141,7 @@ public class VideoController extends GlobalController {
             notificationRepository.save(notif);
             MailManager.sendEmail(u.getEmail(), ADDED_VIDEO, ADDED_VIDEO_BY + user.getFullName());
         }
-        return videoRepository.save(video);
+        return convertToViewVideoDTO(videoRepository.save(video));
     }
 
     @DeleteMapping(value = "/{videoId}/remove")
@@ -138,7 +160,6 @@ public class VideoController extends GlobalController {
         videoRepository.delete(video);
         return new ErrorMessage(SUCCESSFULLY_REMOVED_VIDEO, HttpStatus.OK.value(), LocalDateTime.now());
     }
-
 
     @PutMapping(value = "/{videoId}/like")
     public Object likeVideo(@PathVariable long videoId, HttpSession session) throws BadRequestException {
@@ -165,7 +186,7 @@ public class VideoController extends GlobalController {
         video.setNumberOfLikes(video.getNumberOfLikes() + 1);
         videoRepository.save(video);
         userRepository.save(user);
-        return video;
+        return convertToViewVideoDTO(video);
     }
 
     @PutMapping(value = "/{videoId}/dislike")
@@ -193,7 +214,7 @@ public class VideoController extends GlobalController {
         video.setNumberOfDislikes(video.getNumberOfDislikes() + 1);
         videoRepository.save(video);
         userRepository.save(user);
-        return video;
+        return convertToViewVideoDTO(video);
     }
 
 }
