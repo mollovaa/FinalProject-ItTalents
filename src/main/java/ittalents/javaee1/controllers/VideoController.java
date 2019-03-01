@@ -8,11 +8,14 @@ import ittalents.javaee1.models.*;
 import ittalents.javaee1.util.ErrorMessage;
 
 import ittalents.javaee1.util.MailManager;
+import ittalents.javaee1.util.StorageManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpSession;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -23,14 +26,18 @@ import static ittalents.javaee1.controllers.MyResponse.*;
 @RestController
 @RequestMapping(value = "/videos")
 public class VideoController extends GlobalController {
-
+    
+    public static final String EMPTY_VIDEO_STORAGE = "Empty video storage";
+    public static final String ALREADY_UPLOADED = "Video is already uploaded!";
     private String ADDED_VIDEO_BY = "Video added by ";
     private String ADDED_VIDEO = "New video added!";
     private String INVALID_VIDEO_DESCRIPTION = "Invalid description";
 
     @Autowired
     WatchHistoryRepository watchHistoryRepository;
-
+    @Autowired
+    StorageManager storageManager;
+    
     private void validateVideo(Video video) throws InvalidInputException {
         if (!isValidString(video.getTitle())) {
             throw new InvalidInputException(INVALID_VIDEO_TITLE);
@@ -67,7 +74,37 @@ public class VideoController extends GlobalController {
         }
         return video;
     }
-
+    @GetMapping(value = "/{videoId}/download")
+    public byte[] downloadVideo(@PathVariable long videoId) throws BadRequestException, IOException {
+        if (!videoRepository.existsById(videoId)) {
+            throw new VideoNotFoundException();
+        }
+        Video video = videoRepository.findById(videoId).get();
+        if(video.getURL().isEmpty() || video.getURL() == null) {
+            throw new InvalidInputException(EMPTY_VIDEO_STORAGE);
+        }
+        return storageManager.downloadVideo(video);
+    }
+    @PostMapping(value = "/{videoId}/upload")
+    public Object uploadVideo(@PathVariable long videoId, @RequestPart(value = "file") MultipartFile file,
+							  HttpSession session)
+            throws BadRequestException, IOException {
+        if (!SessionManager.isLogged(session)) {
+            throw new NotLoggedException();
+        }
+        if (!videoRepository.existsById(videoId)) {
+            throw new VideoNotFoundException();
+        }
+        Video video = videoRepository.findById(videoId).get();
+        if (SessionManager.getLoggedUserId(session) != video.getUploaderId()) {
+            throw new AccessDeniedException();
+        }
+        if(video.getURL() != null && !video.getURL().isEmpty()) { // video already uploaded
+            throw new InvalidInputException(ALREADY_UPLOADED);
+        }
+        video.setURL(storageManager.uploadVideo(file,video));
+		return videoRepository.save(video);
+    }
     @PostMapping(value = "/add")
     public Object addVideo(@RequestBody Video video, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
@@ -97,6 +134,7 @@ public class VideoController extends GlobalController {
         if (SessionManager.getLoggedUserId(session) != video.getUploaderId()) {
             throw new AccessDeniedException();
         }
+        storageManager.deleteVideo(video);
         videoRepository.delete(video);
         return new ErrorMessage(SUCCESSFULLY_REMOVED_VIDEO, HttpStatus.OK.value(), LocalDateTime.now());
     }

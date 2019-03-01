@@ -7,11 +7,13 @@ import ittalents.javaee1.exceptions.InvalidJsonBodyException;
 import ittalents.javaee1.exceptions.NotLoggedException;
 import ittalents.javaee1.hibernate.UserRepository;
 import ittalents.javaee1.models.User;
+import ittalents.javaee1.models.Video;
 import ittalents.javaee1.util.CryptWithMD5;
 import ittalents.javaee1.models.dto.UserLoginDTO;
 import ittalents.javaee1.models.dto.UserRegisterDTO;
 import ittalents.javaee1.models.dto.UserSessionDTO;
 import ittalents.javaee1.models.dto.ViewProfileUserDTO;
+import ittalents.javaee1.util.StorageManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,9 +41,8 @@ public class UserController extends GlobalController {
 	public static final String INCORRECT_PASSWORD = "Incorrect password!";
 	public static final String MSG_PASSWORD_CHANGED = "{\"msg\" : \"Password changed!\"}";
 	
-	
 	@Autowired
-	private UserRepository userRepository;
+	StorageManager storageManager;
 	
 	@PostMapping(value = "/logout")
 	public Object logout(HttpSession session) throws BadRequestException {
@@ -76,30 +77,36 @@ public class UserController extends GlobalController {
 			throw new InvalidInputException(INVALID_USER);
 		}
 	}
+	
 	@DeleteMapping(value = "/profile/delete-account")
 	public Object deleteProfile(@RequestParam String password, HttpSession session) throws BadRequestException {
-		if(password == null) {
+		if (password == null) {
 			throw new InvalidInputException(INCORRECT_PASSWORD);
 		}
 		if (SessionManager.isLogged(session)) {
 			User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
-			if(!CryptWithMD5.cryptWithMD5(password).equals(user.getPassword())) {
+			if (!CryptWithMD5.cryptWithMD5(password).equals(user.getPassword())) {
 				throw new InvalidInputException(INCORRECT_PASSWORD);
 			}
-				logout(session);
-				userRepository.deleteById(user.getUserId());
-				return ACCOUNT_DELETED;
+			logout(session);
+			for (Video video : user.getVideos()) { //remove video from storage
+				storageManager.deleteVideo(video);
+			}
+			userRepository.deleteById(user.getUserId());
+			
+			return ACCOUNT_DELETED;
 			
 		} else {
 			throw new NotLoggedException();
 		}
 	}
+	
 	@PutMapping(value = "/profile/edit/password")
-	public Object deleteProfile(@RequestParam String oldPassword,
-								@RequestParam String newPassword,HttpSession session)throws BadRequestException{
+	public Object editPassword(@RequestParam String oldPassword,
+							   @RequestParam String newPassword, HttpSession session) throws BadRequestException {
 		if (SessionManager.isLogged(session)) {
 			User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
-			if(!CryptWithMD5.cryptWithMD5(oldPassword).equals(user.getPassword())) {
+			if (!CryptWithMD5.cryptWithMD5(oldPassword).equals(user.getPassword())) {
 				throw new InvalidInputException(INCORRECT_PASSWORD);
 			}
 			user.setPassword(CryptWithMD5.cryptWithMD5(newPassword));
@@ -109,6 +116,7 @@ public class UserController extends GlobalController {
 			throw new NotLoggedException();
 		}
 	}
+	
 	@DeleteMapping(value = "/unsubscribe/{id}")
 	public Object unSubscribeFrom(HttpSession session, @PathVariable("id") long id) throws BadRequestException {
 		

@@ -27,6 +27,7 @@ public class Video implements Searchable {
     private String title;
     private String category;
     private String description;
+    private String URL;
     private LocalDate uploadDate;
     private long duration;        //seconds
     private int numberOfLikes;

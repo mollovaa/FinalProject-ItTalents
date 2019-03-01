@@ -18,6 +18,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 
 import javax.servlet.http.HttpSession;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 
@@ -56,7 +57,15 @@ public abstract class GlobalController {
         logger.error(e.getMessage());
         return new ErrorMessage(e.getMessage(), HttpStatus.UNAUTHORIZED.value(), LocalDateTime.now());
     }
-
+    
+    @ExceptionHandler({IOException.class})
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseBody
+    public ErrorMessage handleNotFoundFiles(Exception e) {
+        logger.error(e.getMessage(), e);
+        return new ErrorMessage(e.getMessage(), HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+    }
+    
     @ExceptionHandler({BadRequestException.class,
             MissingServletRequestParameterException.class,
             HttpMessageNotReadableException.class,
