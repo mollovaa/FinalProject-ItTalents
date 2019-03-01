@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping(value = "/videos")
 public class VideoController extends GlobalController {
-    //todo remove like/dislike
+
     private static final String NO_COMMENTS = "No comments!";
     private static final String ADDED_VIDEO_BY = "Video added by ";
     private static final String ADDED_VIDEO = "New video added!";
@@ -30,6 +30,8 @@ public class VideoController extends GlobalController {
     private static final String INVALID_VIDEO_TITLE = "Invalid title!";
     private static final String INVALID_VIDEO_DURATION = "Invalid duration!";
     private static final String INVALID_VIDEO_CATEGORY = "Invalid category!";
+    private static final String CANNOT_REMOVE_DISLIKE = "You cannot remove the dislike, as you have not disliked the video!";
+    private static final String CANNOT_REMOVE_LIKE = "You cannot remove the like, as you have not liked the video!";
 
     private void validateVideo(Video video) throws InvalidInputException {
         if (!isValidString(video.getTitle())) {
@@ -174,5 +176,46 @@ public class VideoController extends GlobalController {
         userRepository.save(user);
         return convertToViewVideoDTO(video);
     }
+
+    @PutMapping(value = "/{videoId}/dislikes/remove")
+    public Object removeDislike(@PathVariable long videoId, HttpSession session) throws BadRequestException {
+        if (!SessionManager.isLogged(session)) {
+            throw new NotLoggedException();
+        }
+        if (!videoRepository.existsById(videoId)) {
+            throw new VideoNotFoundException();
+        }
+        Video video = videoRepository.findById(videoId).get();
+        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        if (!user.getDislikedVideos().contains(video)) {
+            throw new BadRequestException(CANNOT_REMOVE_DISLIKE);
+        }
+        user.getDislikedVideos().remove(video);
+        video.getUsersDislikedVideo().remove(user);
+        video.setNumberOfDislikes(video.getNumberOfDislikes() - 1);
+        userRepository.save(user);
+        return convertToViewVideoDTO(videoRepository.save(video));
+    }
+
+    @PutMapping(value = "/{videoId}/likes/remove")
+    public Object removeLike(@PathVariable long videoId, HttpSession session) throws BadRequestException {
+        if (!SessionManager.isLogged(session)) {
+            throw new NotLoggedException();
+        }
+        if (!videoRepository.existsById(videoId)) {
+            throw new VideoNotFoundException();
+        }
+        Video video = videoRepository.findById(videoId).get();
+        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        if (!user.getLikedVideos().contains(video)) {
+            throw new BadRequestException(CANNOT_REMOVE_LIKE);
+        }
+        user.getLikedVideos().remove(video);
+        video.getUsersLikedVideo().remove(user);
+        video.setNumberOfLikes(video.getNumberOfLikes() - 1);
+        userRepository.save(user);
+        return convertToViewVideoDTO(videoRepository.save(video));
+    }
+
 
 }

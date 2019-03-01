@@ -33,6 +33,7 @@ public class Video implements Searchable {
     private int numberOfDislikes;
     private long numberOfViews;
     private long uploaderId;
+    private String URL;
 
     @JsonIgnore
     @ManyToMany(mappedBy = "likedVideos")
@@ -47,7 +48,7 @@ public class Video implements Searchable {
     private List<Playlist> playlistContainingVideo = new ArrayList<>();
 
     @OneToMany(mappedBy = "videoId", orphanRemoval = true)
-    private List<Comment> comments = new ArrayList<>();   //todo show only those with response_to_id = null
+    private List<Comment> comments = new ArrayList<>();
 
     @JsonIgnore
     @OneToMany(mappedBy = "video", orphanRemoval = true)

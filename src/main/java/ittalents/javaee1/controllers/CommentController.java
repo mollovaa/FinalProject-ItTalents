@@ -29,6 +29,9 @@ public class CommentController extends GlobalController {
     private static final String ALREADY_DISLIKED_COMMENT = "You have already disliked this comment!";
     private static final String INVALID_COMMENT_MESSAGE = "Invalid comment message!";
     private static final String ALREADY_LIKED_COMMENT = "You have already liked this comment!";
+    private static final String CANNOT_REMOVE_DISLIKE = "You cannot remove the dislike, as you have not disliked the comment!";
+    private static final String CANNOT_REMOVE_LIKE = "You cannot remove the like, as you have not liked the comment!";
+
 
     private void validateComment(Comment comment) throws InvalidInputException {
         if (!isValidString(comment.getMessage())) {
@@ -123,6 +126,46 @@ public class CommentController extends GlobalController {
         commentRepository.save(comment);
         userRepository.save(user);
         return convertToCommentDTO(comment);
+    }
+
+    @PutMapping(value = "/{commentId}/likes/remove")
+    public Object removeLike(@PathVariable long commentId, HttpSession session) throws BadRequestException {
+        if (!SessionManager.isLogged(session)) {
+            throw new NotLoggedException();
+        }
+        if (!commentRepository.existsById(commentId)) {
+            throw new CommentNotFoundException();
+        }
+        Comment comment = commentRepository.findById(commentId).get();
+        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        if (!user.getLikedComments().contains(comment)) {
+            throw new BadRequestException(CANNOT_REMOVE_LIKE);
+        }
+        user.getLikedComments().remove(comment);
+        comment.getUsersLikedComment().remove(user);
+        comment.setNumberOfLikes(comment.getNumberOfLikes() - 1);
+        userRepository.save(user);
+        return convertToCommentDTO(commentRepository.save(comment));
+    }
+
+    @PutMapping(value = "/{commentId}/dislikes/remove")
+    public Object removeDislike(@PathVariable long commentId, HttpSession session) throws BadRequestException {
+        if (!SessionManager.isLogged(session)) {
+            throw new NotLoggedException();
+        }
+        if (!commentRepository.existsById(commentId)) {
+            throw new CommentNotFoundException();
+        }
+        Comment comment = commentRepository.findById(commentId).get();
+        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        if (!user.getDislikedComments().contains(comment)) {
+            throw new BadRequestException(CANNOT_REMOVE_DISLIKE);
+        }
+        user.getDislikedComments().remove(comment);
+        comment.getUsersDislikedComment().remove(user);
+        comment.setNumberOfDislikes(comment.getNumberOfLikes() - 1);
+        userRepository.save(user);
+        return convertToCommentDTO(commentRepository.save(comment));
     }
 
     @PutMapping(value = "/{commentId}/dislike")
