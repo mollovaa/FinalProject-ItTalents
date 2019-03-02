@@ -33,6 +33,14 @@ public class User implements Searchable {
     private String password;
     private String email;
 
+    public User(int age, String fullName, String username, String password, String email) {
+        this.age = age;
+        this.fullName = fullName;
+        this.username = username;
+        this.password = password;
+        this.email = email;
+    }
+
     @ManyToMany(cascade = {CascadeType.ALL})
     @JoinTable(
             name = "liked_videos_by_users",
@@ -105,14 +113,6 @@ public class User implements Searchable {
     @JsonIgnore
     @OneToMany(mappedBy = "user", orphanRemoval = true)
     Set<WatchHistory> watchHistorySet = new HashSet<>();
-
-    public User(int age, String fullName, String username, String password, String email) {
-        this.age = age;
-        this.fullName = fullName;
-        this.username = username;
-        this.password = password;
-        this.email = email;
-    }
 
     @Override
     public SearchType getType() {

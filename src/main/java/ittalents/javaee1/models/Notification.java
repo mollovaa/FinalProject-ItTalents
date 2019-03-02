@@ -1,12 +1,15 @@
 package ittalents.javaee1.models;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import javax.persistence.*;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
 import java.time.LocalDate;
 
 
@@ -32,8 +35,6 @@ public class Notification {
         this.isRead = false;
         this.observerId = observerId;
     }
-
-
 
 
 }

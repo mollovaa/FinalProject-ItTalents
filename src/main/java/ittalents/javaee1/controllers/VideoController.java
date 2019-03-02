@@ -1,12 +1,20 @@
 package ittalents.javaee1.controllers;
 
-import ittalents.javaee1.exceptions.*;
-import ittalents.javaee1.models.*;
-import ittalents.javaee1.models.dto.ViewCommentDTO;
-import ittalents.javaee1.util.ErrorMessage;
+
+import ittalents.javaee1.exceptions.AccessDeniedException;
+import ittalents.javaee1.exceptions.BadRequestException;
+import ittalents.javaee1.exceptions.InvalidInputException;
+import ittalents.javaee1.exceptions.NotLoggedException;
+import ittalents.javaee1.exceptions.VideoNotFoundException;
+import ittalents.javaee1.models.Comment;
+import ittalents.javaee1.models.Notification;
+import ittalents.javaee1.models.User;
+import ittalents.javaee1.models.Video;
+import ittalents.javaee1.models.VideoCategory;
+import ittalents.javaee1.models.WatchHistory;
+import ittalents.javaee1.util.ResponseMessage;
 import ittalents.javaee1.util.MailManager;
-import ittalents.javaee1.util.StorageManager;
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,10 +23,8 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-
 
 @RestController
 @RequestMapping(value = "/videos")
@@ -28,22 +34,18 @@ public class VideoController extends GlobalController {
     private static final String ADDED_VIDEO_BY = "Video added by ";
     private static final String ADDED_VIDEO = "New video added!";
     private static final String INVALID_VIDEO_DESCRIPTION = "Invalid description";
-    private static final String SUCCESSFULLY_REMOVED_VIDEO = "You have successfully removed a video!";
-    private static final String ALREADY_LIKED_VIDEO = "You have already liked this video!";
-    private static final String ALREADY_DISLIKED_VIDEO = "You have already disliked this video!";
+    private static final String SUCCESSFULLY_REMOVED_VIDEO = "Successfully removed a video!";
+    private static final String ALREADY_LIKED_VIDEO = "Already liked this video!";
+    private static final String ALREADY_DISLIKED_VIDEO = "Already disliked this video!";
     private static final String INVALID_VIDEO_TITLE = "Invalid title!";
     private static final String INVALID_VIDEO_DURATION = "Invalid duration!";
     private static final String INVALID_VIDEO_CATEGORY = "Invalid category!";
-    private static final String CANNOT_REMOVE_DISLIKE = "You cannot remove the dislike, as you have not disliked the video!";
-    private static final String CANNOT_REMOVE_LIKE = "You cannot remove the like, as you have not liked the video!";
+    private static final String CANNOT_REMOVE_DISLIKE = "Video not disliked!";
+    private static final String CANNOT_REMOVE_LIKE = "Video not liked!";
 
-    
-    public static final String EMPTY_VIDEO_STORAGE = "Empty video storage";
-    public static final String ALREADY_UPLOADED = "Video is already uploaded!";
-   
-   @Autowired
-    private StorageManager storageManager;
-    
+    private static final String EMPTY_VIDEO_STORAGE = "Empty video storage";
+    private static final String ALREADY_UPLOADED = "Video is already uploaded!";
+
     private void validateVideo(Video video) throws InvalidInputException {
         if (!isValidString(video.getTitle())) {
             throw new InvalidInputException(INVALID_VIDEO_TITLE);
@@ -76,42 +78,48 @@ public class VideoController extends GlobalController {
             if (!watchHistoryRepository.existsByVideoAndUser(video, user)) {
                 WatchHistory historyRecord = new WatchHistory(user, video);
                 watchHistoryRepository.save(historyRecord);
+            } else {
+                WatchHistory watchHistory = watchHistoryRepository.getByUserAndVideo(user, video);
+                watchHistory.setDate(LocalDate.now());
+                watchHistoryRepository.save(watchHistory);
             }
         }
         return this.convertToViewVideoDTO(video);
     }
 
     @GetMapping(value = "/{videoId}/comments/all")
-    public Object[] showVideoComments(@PathVariable long videoId) throws BadRequestException {
+    public Object showVideoComments(@PathVariable long videoId) throws BadRequestException {
         if (!videoRepository.existsById(videoId)) {
             throw new VideoNotFoundException();
         }
         Video video = videoRepository.findById(videoId).get();
         List<Comment> comments = video.getComments();   //need only comments , NOT responses
-        comments = comments.stream().filter(comment -> comment.getResponseToId() == null).collect(Collectors.toList());
+        comments = comments.stream()
+                .filter(comment -> comment.getResponseToId() == null)
+                .collect(Collectors.toList());
         if (comments.isEmpty()) {
-            throw new BadRequestException(NO_COMMENTS);
+            return new ResponseMessage(NO_COMMENTS, HttpStatus.OK.value(), LocalDateTime.now());
         }
-        List<ViewCommentDTO> commentsToShow = new ArrayList<>();
-        for (Comment c : comments) {
-            commentsToShow.add(convertToCommentDTO(c));
-        }
-        return commentsToShow.toArray();
+        return comments.stream()
+                .map(comment -> convertToCommentDTO(comment))
+                .collect(Collectors.toList());
     }
+
     @GetMapping(value = "/{videoId}/download")
     public byte[] downloadVideo(@PathVariable long videoId) throws BadRequestException, IOException {
         if (!videoRepository.existsById(videoId)) {
             throw new VideoNotFoundException();
         }
         Video video = videoRepository.findById(videoId).get();
-        if(video.getURL().isEmpty() || video.getURL() == null) {
+        if (video.getURL() == null || video.getURL().isEmpty()) {
             throw new InvalidInputException(EMPTY_VIDEO_STORAGE);
         }
         return storageManager.downloadVideo(video);
     }
+
     @PostMapping(value = "/{videoId}/upload")
     public Object uploadVideo(@PathVariable long videoId, @RequestPart(value = "file") MultipartFile file,
-							  HttpSession session)
+                              HttpSession session)
             throws BadRequestException, IOException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
@@ -123,19 +131,10 @@ public class VideoController extends GlobalController {
         if (SessionManager.getLoggedUserId(session) != video.getUploaderId()) {
             throw new AccessDeniedException();
         }
-        if(video.getURL() != null && !video.getURL().isEmpty()) { // video already uploaded
+        if (video.getURL() != null && !video.getURL().isEmpty()) { // video already uploaded
             throw new InvalidInputException(ALREADY_UPLOADED);
         }
-        video.setURL(storageManager.uploadVideo(file,video));
-		return videoRepository.save(video);
-    }
-    @PostMapping(value = "/add")
-    public Object addVideo(@RequestBody Video video, HttpSession session) throws BadRequestException {
-        if (!SessionManager.isLogged(session)) {
-            throw new NotLoggedException();
-        }
-        this.validateVideo(video);
-        video.setUploaderId(SessionManager.getLoggedUserId(session));
+        video.setURL(storageManager.uploadVideo(file, video));
         //notify all subscribers of current user:
         User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
         for (User u : user.getMySubscribers()) {
@@ -143,6 +142,16 @@ public class VideoController extends GlobalController {
             notificationRepository.save(notif);
             MailManager.sendEmail(u.getEmail(), ADDED_VIDEO, ADDED_VIDEO_BY + user.getFullName());
         }
+        return convertToViewVideoDTO(videoRepository.save(video));
+    }
+
+    @PostMapping(value = "/add")
+    public Object addVideo(@RequestBody Video video, HttpSession session) throws BadRequestException {
+        if (!SessionManager.isLogged(session)) {
+            throw new NotLoggedException();
+        }
+        this.validateVideo(video);
+        video.setUploaderId(SessionManager.getLoggedUserId(session));
         return convertToViewVideoDTO(videoRepository.save(video));
     }
 
@@ -160,7 +169,7 @@ public class VideoController extends GlobalController {
         }
         storageManager.deleteVideo(video);
         videoRepository.delete(video);
-        return new ErrorMessage(SUCCESSFULLY_REMOVED_VIDEO, HttpStatus.OK.value(), LocalDateTime.now());
+        return new ResponseMessage(SUCCESSFULLY_REMOVED_VIDEO, HttpStatus.OK.value(), LocalDateTime.now());
     }
 
     @PutMapping(value = "/{videoId}/like")
@@ -176,7 +185,7 @@ public class VideoController extends GlobalController {
         if (user.getLikedVideos().contains(video)) {
             throw new BadRequestException(ALREADY_LIKED_VIDEO);
         }
-        if (user.getDislikedVideos().contains(video)) {//many to many select
+        if (user.getDislikedVideos().contains(video)) {
             user.getDislikedVideos().remove(video);
             video.getUsersDislikedVideo().remove(user);
             videoRepository.save(video);

@@ -12,10 +12,12 @@ import java.util.List;
 @AllArgsConstructor
 @Getter
 @Setter
-public class ViewPlaylistDTO {
+public class ViewPlaylistDTO extends SearchablePlaylistDTO {
 
-    private long id;
-    private String name;
-    private String owner;
-    private List<VideoInPlaylistDTO> videos = new ArrayList<>();
+    private List<SearchableVideoDTO> videos = new ArrayList<>();
+
+    public ViewPlaylistDTO(long id, String name, String owner, int videos_number, List<SearchableVideoDTO> videos) {
+        super(id, name, owner, videos_number);
+        this.videos = videos;
+    }
 }

@@ -9,7 +9,7 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
 
     List<Video> findAllByTitleContaining(String title);
 
-    List<Video> findAllByTitleAndDurationLessThanEqual(String title, long duration);
+    List<Video> findAllByTitleContainingAndDurationLessThanEqual(String title, long duration);
 
-    List<Video> findAllByTitleAndDurationGreaterThan(String title, long duration);
+    List<Video> findAllByTitleContainingAndDurationGreaterThan(String title, long duration);
 }

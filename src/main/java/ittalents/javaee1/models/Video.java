@@ -3,9 +3,18 @@ package ittalents.javaee1.models;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import ittalents.javaee1.models.search.SearchType;
 import ittalents.javaee1.models.search.Searchable;
-import lombok.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
-import javax.persistence.*;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.ManyToMany;
+import javax.persistence.OneToMany;
+import javax.persistence.Table;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -34,7 +43,7 @@ public class Video implements Searchable {
     private int numberOfDislikes;
     private long numberOfViews;
     private long uploaderId;
-    private String URL;
+
 
     @JsonIgnore
     @ManyToMany(mappedBy = "likedVideos")

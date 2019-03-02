@@ -11,6 +11,9 @@ public enum VideoCategory {
 
 
     public static boolean contains(String category) {
-        return Arrays.stream(values()).map(VideoCategory::name).collect(Collectors.toList()).contains(category.toUpperCase());
+        return Arrays.stream(values())
+                .map(VideoCategory::name)
+                .collect(Collectors.toList())
+                .contains(category.toUpperCase());
     }
 }

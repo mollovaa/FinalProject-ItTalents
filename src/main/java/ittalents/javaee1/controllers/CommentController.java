@@ -7,7 +7,7 @@ import ittalents.javaee1.models.Notification;
 import ittalents.javaee1.models.User;
 
 import ittalents.javaee1.models.dto.ViewCommentDTO;
-import ittalents.javaee1.util.ErrorMessage;
+import ittalents.javaee1.util.ResponseMessage;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,12 +25,12 @@ public class CommentController extends GlobalController {
     private static final String COMMENTED_VIDEO_BY = "Your video has been commented by ";
     private static final String RESPONSED_TO_COMMENT = " responsed to your comment";
     private static final String NO_RESPONSES = "No responses!";
-    private static final String SUCCESSFULLY_REMOVED_COMMENT = "You have successfully removed a comment!";
-    private static final String ALREADY_DISLIKED_COMMENT = "You have already disliked this comment!";
+    private static final String SUCCESSFULLY_REMOVED_COMMENT = "Successfully removed comment!";
+    private static final String ALREADY_DISLIKED_COMMENT = "Already disliked this comment!";
     private static final String INVALID_COMMENT_MESSAGE = "Invalid comment message!";
-    private static final String ALREADY_LIKED_COMMENT = "You have already liked this comment!";
-    private static final String CANNOT_REMOVE_DISLIKE = "You cannot remove the dislike, as you have not disliked the comment!";
-    private static final String CANNOT_REMOVE_LIKE = "You cannot remove the like, as you have not liked the comment!";
+    private static final String ALREADY_LIKED_COMMENT = "Already liked this comment!";
+    private static final String CANNOT_REMOVE_DISLIKE = "Comment not disliked!";
+    private static final String CANNOT_REMOVE_LIKE = "Comment not liked!";
 
 
     private void validateComment(Comment comment) throws InvalidInputException {
@@ -43,14 +43,14 @@ public class CommentController extends GlobalController {
     }
 
     @GetMapping(value = "/{commentId}/responses/all")
-    public Object[] showAllResponsesOnComment(@PathVariable long commentId) throws BadRequestException {
+    public Object showAllResponsesOnComment(@PathVariable long commentId) throws BadRequestException {
         if (!commentRepository.existsById(commentId)) {
             throw new CommentNotFoundException();
         }
         Comment comment = commentRepository.findById(commentId).get();
         List<Comment> responses = comment.getResponses();
         if (responses.isEmpty()) {
-            throw new BadRequestException(NO_RESPONSES);
+            return new ResponseMessage(NO_RESPONSES, HttpStatus.OK.value(), LocalDateTime.now());
         }
         List<ViewCommentDTO> responsesToShow = new ArrayList<>();
         for (Comment c : responses) {
@@ -73,9 +73,11 @@ public class CommentController extends GlobalController {
         comment.setResponseToId(null);
         //notify video`s owner
         long uploaderId = videoRepository.findById(videoId).get().getUploaderId();
-        String writerName = userRepository.findById(SessionManager.getLoggedUserId(session)).get().getFullName();
-        Notification notif = new Notification(COMMENTED_VIDEO_BY + writerName, uploaderId);
-        notificationRepository.save(notif);
+        if (uploaderId != SessionManager.getLoggedUserId(session)) {
+            String writerName = userRepository.findById(SessionManager.getLoggedUserId(session)).get().getFullName();
+            Notification notif = new Notification(COMMENTED_VIDEO_BY + writerName, uploaderId);
+            notificationRepository.save(notif);
+        }
         return convertToCommentDTO(commentRepository.save(comment));
     }
 
@@ -101,7 +103,7 @@ public class CommentController extends GlobalController {
     }
 
     @PutMapping(value = "/{commentId}/like")
-    public Object likeVideo(@PathVariable long commentId, HttpSession session) throws BadRequestException {
+    public Object likeComment(@PathVariable long commentId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
@@ -113,7 +115,7 @@ public class CommentController extends GlobalController {
         if (user.getLikedComments().contains(comment)) {
             throw new BadRequestException(ALREADY_LIKED_COMMENT);
         }
-        if (user.getDislikedComments().contains(comment)) {  //many to many select
+        if (user.getDislikedComments().contains(comment)) {
             user.getDislikedComments().remove(comment);
             comment.getUsersDislikedComment().remove(user);
             commentRepository.save(comment);
@@ -169,7 +171,7 @@ public class CommentController extends GlobalController {
     }
 
     @PutMapping(value = "/{commentId}/dislike")
-    public Object dislikeVideo(@PathVariable long commentId, HttpSession session) throws BadRequestException {
+    public Object dislikeComment(@PathVariable long commentId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
@@ -197,7 +199,7 @@ public class CommentController extends GlobalController {
     }
 
     @DeleteMapping(value = "/{commentId}/remove")
-    public Object removeVideo(@PathVariable long commentId, HttpSession session) throws BadRequestException {
+    public Object removeComment(@PathVariable long commentId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
@@ -210,7 +212,7 @@ public class CommentController extends GlobalController {
             throw new AccessDeniedException();
         }
         commentRepository.delete(comment);
-        return new ErrorMessage(SUCCESSFULLY_REMOVED_COMMENT, HttpStatus.OK.value(), LocalDateTime.now());
+        return new ResponseMessage(SUCCESSFULLY_REMOVED_COMMENT, HttpStatus.OK.value(), LocalDateTime.now());
     }
 }
 

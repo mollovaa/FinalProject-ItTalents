@@ -1,22 +1,21 @@
 package ittalents.javaee1.controllers;
 
-import ittalents.javaee1.exceptions.*;
+import ittalents.javaee1.exceptions.AccessDeniedException;
+import ittalents.javaee1.exceptions.BadRequestException;
+import ittalents.javaee1.exceptions.InvalidInputException;
+import ittalents.javaee1.exceptions.NotLoggedException;
+import ittalents.javaee1.exceptions.PlaylistNotFoundException;
+import ittalents.javaee1.exceptions.VideoNotFoundException;
 import ittalents.javaee1.models.Playlist;
 import ittalents.javaee1.models.Video;
 
-import ittalents.javaee1.models.dto.VideoInPlaylistDTO;
-import ittalents.javaee1.models.dto.ViewPlaylistDTO;
-import ittalents.javaee1.models.dto.ViewVideoDTO;
-import ittalents.javaee1.util.ErrorMessage;
+import ittalents.javaee1.util.ResponseMessage;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
 
 
 @RestController
@@ -26,21 +25,12 @@ public class PlaylistController extends GlobalController {
     private static final String VIDEO_NOT_IN_PLAYLIST = "You cannot remove a video from playlist as it is not in the playlist!";
     private static final String VIDEO_ALREADY_ADDED_TO_PLAYLIST = "You have already added this video to playlist!";
     private static final String SUCCESSFULLY_REMOVED_PLAYLIST = "You have successfully removed a playlist!";
+    private static final String INVALID_PLAYLIST_NAME = "Invalid playlist name!";
 
     private void validatePlaylist(Playlist playlist) throws InvalidInputException {
         if (!isValidString(playlist.getPlaylistName())) {
-            throw new InvalidInputException("Invalid playlist name!");
+            throw new InvalidInputException(INVALID_PLAYLIST_NAME);
         }
-    }
-
-    private ViewPlaylistDTO convertToPlaylistDTO(Playlist playlist) {
-        List<Video> videos = playlist.getVideosInPlaylist();
-        List<VideoInPlaylistDTO> videosToShow = new ArrayList<>();
-        for (Video v : videos) {
-            videosToShow.add(convertToVideoInPlaylistDTO(v));
-        }
-        return new ViewPlaylistDTO(playlist.getPlaylistId(), playlist.getPlaylistName(),
-                userRepository.findById(playlist.getOwnerId()).get().getFullName(), videosToShow);
     }
 
     @GetMapping(value = "/{playlistId}/show")
@@ -49,17 +39,18 @@ public class PlaylistController extends GlobalController {
         if (!playlistRepository.existsById(playlistId)) {
             throw new PlaylistNotFoundException();
         }
-        return convertToPlaylistDTO(playlistRepository.findById(playlistId).get());
+        return convertToViewPlaylistDTO(playlistRepository.findById(playlistId).get());
     }
 
     @PostMapping(value = "/add")
-    public Object addPlaylist(@RequestBody Playlist playlist, HttpSession session) throws BadRequestException {
+    public Object addPlaylist(@RequestParam("name") String name, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
+        Playlist playlist = new Playlist(name);
         validatePlaylist(playlist);
         playlist.setOwnerId(SessionManager.getLoggedUserId(session));
-        return convertToPlaylistDTO(playlistRepository.save(playlist));
+        return convertToViewPlaylistDTO(playlistRepository.save(playlist));
     }
 
     @DeleteMapping(value = "/{playlistId}/remove")
@@ -75,7 +66,7 @@ public class PlaylistController extends GlobalController {
             throw new AccessDeniedException();
         }
         playlistRepository.deleteById(playlistId);
-        return new ErrorMessage(SUCCESSFULLY_REMOVED_PLAYLIST, HttpStatus.OK.value(), LocalDateTime.now());
+        return new ResponseMessage(SUCCESSFULLY_REMOVED_PLAYLIST, HttpStatus.OK.value(), LocalDateTime.now());
     }
 
     @PutMapping(value = "/{playlistId}/videos/{videoId}/add")
@@ -101,7 +92,7 @@ public class PlaylistController extends GlobalController {
         playlist.getVideosInPlaylist().add(video);
         video.getPlaylistContainingVideo().add(playlist);
         videoRepository.save(video);
-        return convertToPlaylistDTO(playlistRepository.save(playlist));
+        return convertToViewPlaylistDTO(playlistRepository.save(playlist));
     }
 
     @PutMapping(value = "/{playlistId}/videos/{videoId}/remove")
@@ -127,7 +118,7 @@ public class PlaylistController extends GlobalController {
         playlist.getVideosInPlaylist().remove(video);
         video.getPlaylistContainingVideo().remove(playlist);
         videoRepository.save(video);
-        return convertToPlaylistDTO(playlistRepository.save(playlist));
+        return convertToViewPlaylistDTO(playlistRepository.save(playlist));
     }
 }
 

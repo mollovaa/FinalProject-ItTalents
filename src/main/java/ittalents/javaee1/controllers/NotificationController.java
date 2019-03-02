@@ -5,7 +5,7 @@ import ittalents.javaee1.exceptions.BadRequestException;
 import ittalents.javaee1.exceptions.NotLoggedException;
 import ittalents.javaee1.models.Notification;
 import ittalents.javaee1.models.User;
-import ittalents.javaee1.util.ErrorMessage;
+import ittalents.javaee1.util.ResponseMessage;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,14 +18,17 @@ import java.util.List;
 @RequestMapping(value = "/notifications")
 public class NotificationController extends GlobalController {
 
+    private static final String NO_NOTIFICATIONS = "No notifications";
+    private static final String SUCCESSFULLY_CLEARED_NOTIFICATIONS = "Successfully cleared notifications!";
+
     @GetMapping(value = "/unread")     //only unread notifications
-    public Object[] showUnreadNotifications(HttpSession session) throws BadRequestException {
+    public Object showUnreadNotifications(HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
         User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
         if (user.getNotifications() == null || user.getNotifications().isEmpty()) {
-            throw new BadRequestException("No notifications");
+            return new ResponseMessage(NO_NOTIFICATIONS, HttpStatus.OK.value(), LocalDateTime.now());
         }
         ArrayList<Notification> result = new ArrayList<>();
         for (Notification n : user.getNotifications()) {
@@ -36,20 +39,20 @@ public class NotificationController extends GlobalController {
             }
         }
         if (result.isEmpty()) {
-            throw new BadRequestException("No unread notifications");
+            return new ResponseMessage(NO_NOTIFICATIONS, HttpStatus.OK.value(), LocalDateTime.now());
         }
-        return result.toArray();
+        return result;
     }
 
     @GetMapping(value = "/all")
-    public Object[] showAllNotifications(HttpSession session) throws BadRequestException {
+    public Object showAllNotifications(HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
         User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
         List<Notification> notifications = user.getNotifications();
         if (notifications == null || notifications.isEmpty()) {
-            throw new BadRequestException("No notifications");
+            return new ResponseMessage(NO_NOTIFICATIONS, HttpStatus.OK.value(), LocalDateTime.now());
         }
         for (Notification n : notifications) {
             if (!n.isRead()) {
@@ -57,7 +60,7 @@ public class NotificationController extends GlobalController {
                 notificationRepository.save(n);
             }
         }
-        return notifications.toArray();
+        return notifications;
     }
 
     @PutMapping(value = "/all/clear")
@@ -68,11 +71,11 @@ public class NotificationController extends GlobalController {
         User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
         List<Notification> notifications = user.getNotifications();
         if (notifications == null || notifications.isEmpty()) {
-            throw new BadRequestException("No notifications");
+            return new ResponseMessage(NO_NOTIFICATIONS, HttpStatus.OK.value(), LocalDateTime.now());
         }
         for (Notification n : notifications) {
             notificationRepository.delete(n);
         }
-        return new ErrorMessage("Successfully cleared notifications!", HttpStatus.OK.value(), LocalDateTime.now());
+        return new ResponseMessage(SUCCESSFULLY_CLEARED_NOTIFICATIONS, HttpStatus.OK.value(), LocalDateTime.now());
     }
 }
