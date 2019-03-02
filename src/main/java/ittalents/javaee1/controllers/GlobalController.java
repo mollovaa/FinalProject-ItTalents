@@ -33,6 +33,9 @@ import java.util.stream.Collectors;
 @RequestMapping(produces = "application/json")
 public abstract class GlobalController {
 
+    protected final String EMPTY_HISTORY = "Empty history!";
+    protected final String SUCCESSFULLY_CLEARED_HISTORY = "Successfully cleared history!";
+
     @Autowired
     NotificationRepository notificationRepository;
     @Autowired
@@ -47,6 +50,9 @@ public abstract class GlobalController {
     WatchHistoryRepository watchHistoryRepository;
     @Autowired
     StorageManager storageManager;
+    @Autowired
+    SearchHistoryRepository searchHistoryRepository;
+
 
     private static Logger logger = LogManager.getLogger(GlobalController.class);
 

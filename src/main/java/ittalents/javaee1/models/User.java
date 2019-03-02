@@ -114,6 +114,10 @@ public class User implements Searchable {
     @OneToMany(mappedBy = "user", orphanRemoval = true)
     Set<WatchHistory> watchHistorySet = new HashSet<>();
 
+    @JsonIgnore
+    @OneToMany(mappedBy = "user", orphanRemoval = true)
+    Set<SearchHistory> searchHistorySet = new HashSet<>();
+
     @Override
     public SearchType getType() {
         return SearchType.USER;

@@ -24,14 +24,12 @@ import java.util.stream.Collectors;
 public class WatchHistoryController extends GlobalController {
 
     private static final String NOT_VALID_SORT_DIRECTION = "Not valid sort direction!";
-    private final String EMPTY_HISTORY = "Empty watch history!";
-    private final String SUCCESSFULLY_CLEARED_HISTORY = "Successfully cleared watched history!";
     private final String ASC = "ASC";
     private final String DESC = "DESC";
 
     @AllArgsConstructor
     @Getter
-    class WatchHistoryToShow {
+    private class WatchHistoryToShow {
         private long id;
         private SearchableVideoDTO video;
         private LocalDate date;
@@ -42,11 +40,11 @@ public class WatchHistoryController extends GlobalController {
     }
 
     @GetMapping(value = "/all")
-    public Object getAllVideosFromHistory(HttpSession session) throws BadRequestException {
+    public Object viewWatchHistory(HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        User user = userRepository.getByUserId(SessionManager.getLoggedUserId(session));
         ArrayList<WatchHistoryToShow> watchHistories =
                 new ArrayList<>(watchHistoryRepository.getAllByUser(user)
                         .stream()

@@ -1,20 +1,29 @@
 package ittalents.javaee1.controllers;
 
+import ittalents.javaee1.exceptions.BadRequestException;
 import ittalents.javaee1.exceptions.InvalidInputException;
+import ittalents.javaee1.hibernate.SearchHistoryRepository;
+import ittalents.javaee1.hibernate.SearchQueryRepository;
+import ittalents.javaee1.models.SearchHistory;
+import ittalents.javaee1.models.User;
 import ittalents.javaee1.models.Video;
 import ittalents.javaee1.models.dto.SearchablePlaylistDTO;
 import ittalents.javaee1.models.dto.SearchableUserDTO;
 import ittalents.javaee1.models.dto.SearchableVideoDTO;
 import ittalents.javaee1.models.search.Filter;
+import ittalents.javaee1.models.SearchQuery;
 import ittalents.javaee1.models.search.SearchType;
 import ittalents.javaee1.models.search.Searchable;
 
 import ittalents.javaee1.util.ResponseMessage;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.servlet.http.HttpSession;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,9 +38,35 @@ public class SearchController extends GlobalController {
     private static final int TWENTY_MINUTES_DURATION = 60 * 20;
     private static final int FOUR_MINUTES_DURATION = 4 * 60;
 
+    @Autowired
+    SearchQueryRepository searchQueryRepository;
+
+    private SearchQuery addToSearchQueries(String search_query) {
+        if (searchQueryRepository.existsBySearchQuery(search_query)) {
+            return searchQueryRepository.getBySearchQuery(search_query);
+        }
+        SearchQuery searchQuery = new SearchQuery(search_query);
+        return searchQueryRepository.save(searchQuery);
+    }
+
+    private void addToSearchHistory(User user, SearchQuery searchQuery) {
+        if (!searchHistoryRepository.existsByUserAndSearchQuery(user, searchQuery)) {
+            searchHistoryRepository.save(new SearchHistory(user, searchQuery));
+        } else {
+            SearchHistory sHistory = searchHistoryRepository.getByUserAndSearchQuery(user, searchQuery);
+            sHistory.setDate(LocalDate.now());
+            searchHistoryRepository.save(sHistory);
+        }
+    }
+
     @GetMapping(value = "/search")
-    public Object search(@RequestParam("q") String search_query) throws InvalidInputException {
+    public Object search(@RequestParam("q") String search_query, HttpSession session) throws BadRequestException {
         if (isValidString(search_query)) {
+            SearchQuery sQuery = this.addToSearchQueries(search_query);  //add to search queries
+            if (SessionManager.isLogged(session)) { //if logged -> add to search history
+                this.addToSearchHistory(userRepository.getByUserId(
+                        SessionManager.getLoggedUserId(session)), sQuery);
+            }
             List<Searchable> result = new ArrayList<>();
             result.addAll(getSearchedUsers(search_query));
             result.addAll(getSearchedVideos(search_query));
@@ -46,13 +81,18 @@ public class SearchController extends GlobalController {
     }
 
     @GetMapping(value = "/search/filters")
-    public Object search(@RequestParam("q") String search_query, @RequestParam("filter") String filter)
-            throws InvalidInputException {
+    public Object search(@RequestParam("q") String search_query, @RequestParam("filter") String filter, HttpSession session)
+            throws BadRequestException {
         if (isValidString(search_query)) {
             if (isValidString(filter)) {
                 Filter myFilter = getFilter(filter);
                 if (myFilter == null) {
                     throw new InvalidInputException(EMPTY_FILTER);
+                }
+                SearchQuery sQuery = this.addToSearchQueries(search_query);  //add to search queries
+                if (SessionManager.isLogged(session)) { //if logged -> add to search history
+                    this.addToSearchHistory(userRepository.getByUserId(
+                            SessionManager.getLoggedUserId(session)), sQuery);
                 }
                 List<Searchable> result = new ArrayList<>();
 
@@ -132,7 +172,7 @@ public class SearchController extends GlobalController {
         throw new InvalidInputException(EMPTY_FILTER);
     }
 
-    public static Filter getFilter(String filterType) {
+    private Filter getFilter(String filterType) {
         Filter[] allFilters = Filter.values();
         for (int i = 0; i < allFilters.length; i++) {
             if (filterType.equals(allFilters[i].getName())) {
