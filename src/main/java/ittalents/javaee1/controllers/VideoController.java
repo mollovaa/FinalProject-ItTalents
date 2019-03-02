@@ -12,9 +12,13 @@ import ittalents.javaee1.models.User;
 import ittalents.javaee1.models.Video;
 import ittalents.javaee1.models.VideoCategory;
 import ittalents.javaee1.models.WatchHistory;
+import ittalents.javaee1.models.search.Filter;
+import ittalents.javaee1.models.search.SearchType;
 import ittalents.javaee1.util.ResponseMessage;
 import ittalents.javaee1.util.MailManager;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,8 +27,11 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static ittalents.javaee1.controllers.SearchController.EMPTY_FILTER;
 
 @RestController
 @RequestMapping(value = "/videos")
@@ -101,7 +108,58 @@ public class VideoController extends GlobalController {
             return new ResponseMessage(NO_COMMENTS, HttpStatus.OK.value(), LocalDateTime.now());
         }
         return comments.stream()
-                .map(comment -> convertToCommentDTO(comment))
+                .map(this::convertToCommentDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Getter
+    @AllArgsConstructor
+    enum CommentFilter {
+
+        NEWEST("newest"), TOP_COMMENTS("top");
+        private final String filter;
+
+        public static CommentFilter getCommentFilter(String filter) {
+            CommentFilter[] allFilters = CommentFilter.values();
+            for (int i = 0; i < allFilters.length; i++) {
+                if (filter.equals(allFilters[i].getFilter())) {
+                    return CommentFilter.values()[i];
+                }
+            }
+            return null;
+        }
+    }
+
+    @GetMapping(value = "/{videoId}/comments/all/sort")
+    public Object showVideoCommentsSortedBy(@PathVariable long videoId, @RequestParam String filter) throws BadRequestException {
+        if (!videoRepository.existsById(videoId)) {
+            throw new VideoNotFoundException();
+        }
+        Video video = videoRepository.findById(videoId).get();
+        List<Comment> comments = video.getComments();   //need only comments , NOT responses
+        comments = comments.stream()
+                .filter(comment -> comment.getResponseToId() == null)
+                .collect(Collectors.toList());
+        if (comments.isEmpty()) {
+            return new ResponseMessage(NO_COMMENTS, HttpStatus.OK.value(), LocalDateTime.now());
+        }
+
+        if (!isValidString(filter)) {
+            throw new InvalidInputException(EMPTY_FILTER);
+        }
+        CommentFilter myFilter = CommentFilter.getCommentFilter(filter);
+        if (myFilter == null) {
+            throw new InvalidInputException(EMPTY_FILTER);
+        }
+        if (myFilter == CommentFilter.NEWEST) {
+            comments.sort(Comparator.comparing(Comment::getDateOfPublication).reversed());
+        } else if (myFilter == CommentFilter.TOP_COMMENTS) {
+            comments.sort(Comparator.comparing(Comment::getNumberOfLikes).reversed());
+        } else {
+            throw new InvalidInputException(EMPTY_FILTER);
+        }
+        return comments.stream()
+                .map(this::convertToCommentDTO)
                 .collect(Collectors.toList());
     }
 

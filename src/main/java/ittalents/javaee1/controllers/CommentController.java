@@ -23,7 +23,7 @@ import java.util.List;
 public class CommentController extends GlobalController {
 
     private static final String COMMENTED_VIDEO_BY = "Your video has been commented by ";
-    private static final String RESPONSED_TO_COMMENT = " responsed to your comment";
+    private static final String RESPOND_TO_COMMENT = " respond to your comment";
     private static final String NO_RESPONSES = "No responses!";
     private static final String SUCCESSFULLY_REMOVED_COMMENT = "Successfully removed comment!";
     private static final String ALREADY_DISLIKED_COMMENT = "Already disliked this comment!";
@@ -97,7 +97,7 @@ public class CommentController extends GlobalController {
         //notify base comment`s owner
         long commentOwnerId = commentRepository.findById(commentId).get().getPublisherId();
         String writerName = userRepository.findById(SessionManager.getLoggedUserId(session)).get().getFullName();
-        Notification notif = new Notification(writerName + RESPONSED_TO_COMMENT, commentOwnerId);
+        Notification notif = new Notification(writerName + RESPOND_TO_COMMENT, commentOwnerId);
         notificationRepository.save(notif);
         return convertToCommentDTO(commentRepository.save(comment));
     }

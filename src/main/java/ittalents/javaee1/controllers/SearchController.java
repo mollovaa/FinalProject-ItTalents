@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 
 @RestController
 public class SearchController extends GlobalController {
-    private static final String EMPTY_FILTER = "Invalid filter option!";
+    public static final String EMPTY_FILTER = "Invalid filter option!";
     private static final String EMPTY_SEARCH = "No matches found!";
     private static final int TWENTY_MINUTES_DURATION = 60 * 20;
     private static final int FOUR_MINUTES_DURATION = 4 * 60;
@@ -87,14 +87,14 @@ public class SearchController extends GlobalController {
     private List<SearchablePlaylistDTO> getSearchedPlaylists(String search_query) {
         return playlistRepository.findAllByPlaylistNameContaining(search_query)
                 .stream()
-                .map(playlist -> convertToSearchablePlaylistDTO(playlist))
+                .map(this::convertToSearchablePlaylistDTO)
                 .collect(Collectors.toList());
     }
 
     private List<SearchableVideoDTO> getSearchedVideos(String search_query) {
         return videoRepository.findAllByTitleContaining(search_query)
                 .stream()
-                .map(video -> convertToSearchableVideoDTO(video))
+                .map(this::convertToSearchableVideoDTO)
                 .collect(Collectors.toList());
     }
 
@@ -102,17 +102,17 @@ public class SearchController extends GlobalController {
         if (filter == Filter.DATE_OF_UPLOAD) {
             List<Video> videos = videoRepository.findAllByTitleContaining(search_query);
             Collections.sort(videos, Comparator.comparing(Video::getUploadDate).reversed());
-            return videos.stream().map(video -> convertToSearchableVideoDTO(video)).collect(Collectors.toList());
+            return videos.stream().map(this::convertToSearchableVideoDTO).collect(Collectors.toList());
         }
         if (filter == Filter.VIEWS) {
             List<Video> videos = videoRepository.findAllByTitleContaining(search_query);
             Collections.sort(videos, Comparator.comparing(Video::getNumberOfViews).reversed());
-            return videos.stream().map(video -> convertToSearchableVideoDTO(video)).collect(Collectors.toList());
+            return videos.stream().map(this::convertToSearchableVideoDTO).collect(Collectors.toList());
         }
         if (filter == Filter.MOST_LIKES) {
             List<Video> videos = videoRepository.findAllByTitleContaining(search_query);
             Collections.sort(videos, Comparator.comparing(Video::getNumberOfLikes).reversed());
-            return videos.stream().map(video -> convertToSearchableVideoDTO(video)).collect(Collectors.toList());
+            return videos.stream().map(this::convertToSearchableVideoDTO).collect(Collectors.toList());
         }
         if (filter == Filter.VIDEOS) { // only videos without order
             return getSearchedVideos(search_query);
@@ -120,19 +120,19 @@ public class SearchController extends GlobalController {
         if (filter == Filter.LENGTH_LONG) { // only videos without order
             return videoRepository.findAllByTitleContainingAndDurationGreaterThan(search_query, TWENTY_MINUTES_DURATION)
                     .stream()
-                    .map(video -> convertToSearchableVideoDTO(video))
+                    .map(this::convertToSearchableVideoDTO)
                     .collect(Collectors.toList());
         }
         if (filter == Filter.LENGTH_SHORT) { // only videos without order
             return videoRepository.findAllByTitleContainingAndDurationLessThanEqual(search_query, FOUR_MINUTES_DURATION)
                     .stream()
-                    .map(video -> convertToSearchableVideoDTO(video))
+                    .map(this::convertToSearchableVideoDTO)
                     .collect(Collectors.toList());
         }
         throw new InvalidInputException(EMPTY_FILTER);
     }
 
-    private Filter getFilter(String filterType) {
+    public static Filter getFilter(String filterType) {
         Filter[] allFilters = Filter.values();
         for (int i = 0; i < allFilters.length; i++) {
             if (filterType.equals(allFilters[i].getName())) {

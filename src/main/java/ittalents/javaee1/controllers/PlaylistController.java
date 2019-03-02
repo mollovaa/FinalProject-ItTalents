@@ -22,9 +22,9 @@ import java.time.LocalDateTime;
 @RequestMapping(value = "/playlists")
 public class PlaylistController extends GlobalController {
 
-    private static final String VIDEO_NOT_IN_PLAYLIST = "You cannot remove a video from playlist as it is not in the playlist!";
-    private static final String VIDEO_ALREADY_ADDED_TO_PLAYLIST = "You have already added this video to playlist!";
-    private static final String SUCCESSFULLY_REMOVED_PLAYLIST = "You have successfully removed a playlist!";
+    private static final String VIDEO_NOT_IN_PLAYLIST = "Video not in playlist!";
+    private static final String VIDEO_ALREADY_ADDED_TO_PLAYLIST = "Video already added to playlist!";
+    private static final String SUCCESSFULLY_REMOVED_PLAYLIST = "Successfully removed a playlist!";
     private static final String INVALID_PLAYLIST_NAME = "Invalid playlist name!";
 
     private void validatePlaylist(Playlist playlist) throws InvalidInputException {
