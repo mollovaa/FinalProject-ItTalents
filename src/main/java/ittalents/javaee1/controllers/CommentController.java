@@ -2,11 +2,12 @@ package ittalents.javaee1.controllers;
 
 
 import ittalents.javaee1.exceptions.*;
-import ittalents.javaee1.models.Comment;
-import ittalents.javaee1.models.Notification;
-import ittalents.javaee1.models.User;
+import ittalents.javaee1.models.pojo.Comment;
+import ittalents.javaee1.models.pojo.Notification;
+import ittalents.javaee1.models.pojo.User;
 
 import ittalents.javaee1.models.dto.ViewCommentDTO;
+import ittalents.javaee1.models.pojo.Video;
 import ittalents.javaee1.util.ResponseMessage;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -56,9 +57,20 @@ public class CommentController extends GlobalController {
         for (Comment c : responses) {
             responsesToShow.add(convertToCommentDTO(c));
         }
-        return responsesToShow.toArray();
+        return responsesToShow;
     }
 
+    private void notifyVideosOwnerForComment(long videoId, HttpSession session)
+            throws NotLoggedException {         //notify video`s owner
+        long uploaderId = videoRepository.findById(videoId).get().getUploaderId();
+        if (uploaderId != SessionManager.getLoggedUserId(session)) { //if user comments -> no notification is send
+            String writerName = userRepository.findById(SessionManager.getLoggedUserId(session)).get().getFullName();
+            Notification notif = new Notification(COMMENTED_VIDEO_BY + writerName, uploaderId);
+            notificationRepository.save(notif);
+        }
+    }
+
+    //todo check if video is private
     @PostMapping(value = "/add/toVideo/{videoId}")
     public Object commentVideo(@RequestBody Comment comment, @PathVariable long videoId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
@@ -67,18 +79,27 @@ public class CommentController extends GlobalController {
         if (!videoRepository.existsById(videoId)) {
             throw new VideoNotFoundException();
         }
+        Video video = videoRepository.getByVideoId(videoId);
+        User user = userRepository.getByUserId(SessionManager.getLoggedUserId(session));
+        if (video.isPrivate() && video.getUploaderId() != user.getUserId()) {  //private, not user`s
+            throw new VideoNotFoundException();
+        }
         this.validateComment(comment);
         comment.setPublisherId(SessionManager.getLoggedUserId(session));
         comment.setVideoId(videoId);
         comment.setResponseToId(null);
-        //notify video`s owner
-        long uploaderId = videoRepository.findById(videoId).get().getUploaderId();
-        if (uploaderId != SessionManager.getLoggedUserId(session)) {
-            String writerName = userRepository.findById(SessionManager.getLoggedUserId(session)).get().getFullName();
-            Notification notif = new Notification(COMMENTED_VIDEO_BY + writerName, uploaderId);
-            notificationRepository.save(notif);
-        }
+
+        this.notifyVideosOwnerForComment(videoId, session);
+
         return convertToCommentDTO(commentRepository.save(comment));
+    }
+
+    //notify base comment`s owner
+    private void notifyBaseCommentsOwner(long commentId, HttpSession session) throws NotLoggedException {
+        long commentOwnerId = commentRepository.findById(commentId).get().getPublisherId();
+        String writerName = userRepository.findById(SessionManager.getLoggedUserId(session)).get().getFullName();
+        Notification notif = new Notification(writerName + RESPOND_TO_COMMENT, commentOwnerId);
+        notificationRepository.save(notif);
     }
 
     @PostMapping(value = "/{commentId}/response")
@@ -94,12 +115,43 @@ public class CommentController extends GlobalController {
         comment.setPublisherId(SessionManager.getLoggedUserId(session));
         comment.setVideoId(commentRepository.findById(commentId).get().getVideoId());
         comment.setResponseToId(commentId);
-        //notify base comment`s owner
-        long commentOwnerId = commentRepository.findById(commentId).get().getPublisherId();
-        String writerName = userRepository.findById(SessionManager.getLoggedUserId(session)).get().getFullName();
-        Notification notif = new Notification(writerName + RESPOND_TO_COMMENT, commentOwnerId);
-        notificationRepository.save(notif);
+
+        this.notifyBaseCommentsOwner(commentId, session);
+
         return convertToCommentDTO(commentRepository.save(comment));
+    }
+
+    private void saveUserAndComment(User user, Comment comment) {
+        commentRepository.save(comment);
+        userRepository.save(user);
+    }
+
+    private void removeDislike(User user, Comment comment) {
+        user.getDislikedComments().remove(comment);
+        comment.getUsersDislikedComment().remove(user);
+        comment.setNumberOfDislikes(comment.getNumberOfDislikes() - 1);
+        this.saveUserAndComment(user, comment);
+    }
+
+    private void removeLike(User user, Comment comment) {
+        user.getLikedComments().remove(comment);
+        comment.getUsersLikedComment().remove(user);
+        comment.setNumberOfLikes(comment.getNumberOfLikes() - 1);
+        this.saveUserAndComment(user, comment);
+    }
+
+    private void addLike(User user, Comment comment) {
+        comment.getUsersLikedComment().add(user);
+        user.addLikedComment(comment);
+        comment.setNumberOfLikes(comment.getNumberOfLikes() + 1);
+        this.saveUserAndComment(user, comment);
+    }
+
+    private void addDislike(User user, Comment comment) {
+        comment.getUsersDislikedComment().add(user);
+        user.getDislikedComments().add(comment);
+        comment.setNumberOfDislikes(comment.getNumberOfDislikes() + 1);
+        this.saveUserAndComment(user, comment);
     }
 
     @PutMapping(value = "/{commentId}/like")
@@ -116,17 +168,9 @@ public class CommentController extends GlobalController {
             throw new BadRequestException(ALREADY_LIKED_COMMENT);
         }
         if (user.getDislikedComments().contains(comment)) {
-            user.getDislikedComments().remove(comment);
-            comment.getUsersDislikedComment().remove(user);
-            commentRepository.save(comment);
-            userRepository.save(user);
-            comment.setNumberOfDislikes(comment.getNumberOfDislikes() - 1);
+            this.removeDislike(user, comment);
         }
-        comment.getUsersLikedComment().add(user);
-        user.addLikedComment(comment);
-        comment.setNumberOfLikes(comment.getNumberOfLikes() + 1);
-        commentRepository.save(comment);
-        userRepository.save(user);
+        this.addLike(user, comment);
         return convertToCommentDTO(comment);
     }
 
@@ -143,11 +187,8 @@ public class CommentController extends GlobalController {
         if (!user.getLikedComments().contains(comment)) {
             throw new BadRequestException(CANNOT_REMOVE_LIKE);
         }
-        user.getLikedComments().remove(comment);
-        comment.getUsersLikedComment().remove(user);
-        comment.setNumberOfLikes(comment.getNumberOfLikes() - 1);
-        userRepository.save(user);
-        return convertToCommentDTO(commentRepository.save(comment));
+        this.removeLike(user, comment);
+        return convertToCommentDTO(comment);
     }
 
     @PutMapping(value = "/{commentId}/dislikes/remove")
@@ -163,11 +204,8 @@ public class CommentController extends GlobalController {
         if (!user.getDislikedComments().contains(comment)) {
             throw new BadRequestException(CANNOT_REMOVE_DISLIKE);
         }
-        user.getDislikedComments().remove(comment);
-        comment.getUsersDislikedComment().remove(user);
-        comment.setNumberOfDislikes(comment.getNumberOfLikes() - 1);
-        userRepository.save(user);
-        return convertToCommentDTO(commentRepository.save(comment));
+        this.removeDislike(user, comment);
+        return convertToCommentDTO(comment);
     }
 
     @PutMapping(value = "/{commentId}/dislike")
@@ -184,17 +222,9 @@ public class CommentController extends GlobalController {
             throw new BadRequestException(ALREADY_DISLIKED_COMMENT);
         }
         if (user.getLikedComments().contains(comment)) {   //if liked -> remove the like
-            user.getLikedComments().remove(comment);
-            comment.getUsersLikedComment().remove(user);
-            userRepository.save(user);
-            commentRepository.save(comment);
-            comment.setNumberOfLikes(comment.getNumberOfLikes() - 1);
+            this.removeLike(user, comment);
         }
-        comment.getUsersDislikedComment().add(user);
-        user.getDislikedComments().add(comment);
-        comment.setNumberOfDislikes(comment.getNumberOfDislikes() + 1);
-        commentRepository.save(comment);
-        userRepository.save(user);
+        this.addDislike(user, comment);
         return convertToCommentDTO(comment);
     }
 

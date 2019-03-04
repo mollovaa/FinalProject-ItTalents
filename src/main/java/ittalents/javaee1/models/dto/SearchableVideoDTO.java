@@ -1,5 +1,7 @@
 package ittalents.javaee1.models.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import ittalents.javaee1.models.search.SearchType;
 import ittalents.javaee1.models.search.Searchable;
 import lombok.AllArgsConstructor;
@@ -17,6 +19,10 @@ public class SearchableVideoDTO implements Searchable {
     private String title;
     private String uploader;
 
+    @JsonIgnore
+    private long uploaderId;
+    @JsonIgnore
+    private boolean isprivate;    //vijda se!!!!!!!!!!!!!!!!
 
     @Override
     public SearchType getType() {

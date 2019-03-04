@@ -5,11 +5,11 @@ import ittalents.javaee1.exceptions.BadRequestException;
 
 import ittalents.javaee1.exceptions.NotFoundException;
 import ittalents.javaee1.exceptions.NotLoggedException;
-import ittalents.javaee1.hibernate.*;
-import ittalents.javaee1.models.Comment;
-import ittalents.javaee1.models.Playlist;
-import ittalents.javaee1.models.User;
-import ittalents.javaee1.models.Video;
+import ittalents.javaee1.repository.*;
+import ittalents.javaee1.models.pojo.Comment;
+import ittalents.javaee1.models.pojo.Playlist;
+import ittalents.javaee1.models.pojo.User;
+import ittalents.javaee1.models.pojo.Video;
 import ittalents.javaee1.models.dto.*;
 import ittalents.javaee1.util.ResponseMessage;
 import ittalents.javaee1.util.StorageManager;
@@ -118,7 +118,8 @@ public abstract class GlobalController {
 
     SearchableVideoDTO convertToSearchableVideoDTO(Video video) {
         return new SearchableVideoDTO(video.getVideoId(), video.getTitle(),
-                userRepository.findById(video.getUploaderId()).get().getFullName());
+                userRepository.findById(video.getUploaderId()).get().getFullName(),
+                video.getUploaderId(),  video.isPrivate());
     }
 
     SearchablePlaylistDTO convertToSearchablePlaylistDTO(Playlist playlist) {

@@ -1,9 +1,7 @@
-package ittalents.javaee1.models;
+package ittalents.javaee1.models.pojo;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import ittalents.javaee1.models.SearchHistory;
-import ittalents.javaee1.models.WatchHistory;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

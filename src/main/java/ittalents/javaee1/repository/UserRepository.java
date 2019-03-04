@@ -1,6 +1,6 @@
-package ittalents.javaee1.hibernate;
+package ittalents.javaee1.repository;
 
-import ittalents.javaee1.models.User;
+import ittalents.javaee1.models.pojo.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

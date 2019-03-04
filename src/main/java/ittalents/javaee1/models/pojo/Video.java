@@ -1,4 +1,4 @@
-package ittalents.javaee1.models;
+package ittalents.javaee1.models.pojo;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import ittalents.javaee1.models.search.SearchType;
@@ -39,6 +39,7 @@ public class Video implements Searchable {
     private String URL;
     private LocalDate uploadDate;
     private long duration;        //seconds
+    private boolean isPrivate;
     private int numberOfLikes;
     private int numberOfDislikes;
     private long numberOfViews;

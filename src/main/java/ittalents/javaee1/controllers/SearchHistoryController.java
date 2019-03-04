@@ -3,14 +3,11 @@ package ittalents.javaee1.controllers;
 import ittalents.javaee1.exceptions.AccessDeniedException;
 import ittalents.javaee1.exceptions.BadRequestException;
 import ittalents.javaee1.exceptions.NotLoggedException;
-import ittalents.javaee1.hibernate.SearchHistoryRepository;
-import ittalents.javaee1.models.SearchHistory;
-import ittalents.javaee1.models.User;
-import ittalents.javaee1.models.WatchHistory;
+import ittalents.javaee1.models.pojo.SearchHistory;
+import ittalents.javaee1.models.pojo.User;
 import ittalents.javaee1.util.ResponseMessage;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 

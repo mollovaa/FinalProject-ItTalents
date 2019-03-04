@@ -1,4 +1,4 @@
-package ittalents.javaee1.models;
+package ittalents.javaee1.models.pojo;
 
 import ittalents.javaee1.models.search.SearchType;
 import ittalents.javaee1.models.search.Searchable;

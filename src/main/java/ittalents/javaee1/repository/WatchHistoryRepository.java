@@ -1,9 +1,9 @@
 
-package ittalents.javaee1.hibernate;
+package ittalents.javaee1.repository;
 
-import ittalents.javaee1.models.User;
-import ittalents.javaee1.models.Video;
-import ittalents.javaee1.models.WatchHistory;
+import ittalents.javaee1.models.pojo.User;
+import ittalents.javaee1.models.pojo.Video;
+import ittalents.javaee1.models.pojo.WatchHistory;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

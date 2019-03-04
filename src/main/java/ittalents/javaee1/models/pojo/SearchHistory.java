@@ -1,31 +1,23 @@
-package ittalents.javaee1.models;
+package ittalents.javaee1.models.pojo;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.ToString;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
+import javax.persistence.*;
 import java.time.LocalDate;
 import java.util.Objects;
 
 @Entity
-@Table(name = "watch_history")
+@Table(name = "search_history")
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
 @Setter
-public class WatchHistory {
+public class SearchHistory {
 
-    @JsonIgnore
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
@@ -36,14 +28,14 @@ public class WatchHistory {
     private User user;
 
     @ManyToOne
-    @JoinColumn(name = "watched_video_id")
-    private Video video;
+    @JoinColumn(name = "search_query_id")
+    private SearchQuery searchQuery;
 
     private LocalDate date;
 
-    public WatchHistory(User user, Video video) {
+    public SearchHistory(User user, SearchQuery searchQuery) {
         this.user = user;
-        this.video = video;
+        this.searchQuery = searchQuery;
         this.date = LocalDate.now();
     }
 
@@ -51,7 +43,7 @@ public class WatchHistory {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        WatchHistory that = (WatchHistory) o;
+        SearchHistory that = (SearchHistory) o;
         return id == that.id;
     }
 

@@ -1,4 +1,4 @@
-package ittalents.javaee1.models;
+package ittalents.javaee1.models.pojo;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;

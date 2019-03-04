@@ -3,8 +3,8 @@ package ittalents.javaee1.controllers;
 
 import ittalents.javaee1.exceptions.BadRequestException;
 import ittalents.javaee1.exceptions.NotLoggedException;
-import ittalents.javaee1.models.User;
-import ittalents.javaee1.models.WatchHistory;
+import ittalents.javaee1.models.pojo.User;
+import ittalents.javaee1.models.pojo.WatchHistory;
 import ittalents.javaee1.models.dto.SearchableVideoDTO;
 import ittalents.javaee1.util.ResponseMessage;
 import lombok.AllArgsConstructor;

@@ -1,4 +1,4 @@
-package ittalents.javaee1.models;
+package ittalents.javaee1.models.pojo;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;

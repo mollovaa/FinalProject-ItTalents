@@ -3,8 +3,8 @@ package ittalents.javaee1.controllers;
 
 import ittalents.javaee1.exceptions.BadRequestException;
 import ittalents.javaee1.exceptions.NotLoggedException;
-import ittalents.javaee1.models.Notification;
-import ittalents.javaee1.models.User;
+import ittalents.javaee1.models.pojo.Notification;
+import ittalents.javaee1.models.pojo.User;
 import ittalents.javaee1.util.ResponseMessage;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;

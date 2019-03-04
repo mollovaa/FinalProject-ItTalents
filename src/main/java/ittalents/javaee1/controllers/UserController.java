@@ -4,7 +4,7 @@ import ittalents.javaee1.exceptions.BadRequestException;
 import ittalents.javaee1.exceptions.InvalidInputException;
 import ittalents.javaee1.exceptions.InvalidJsonBodyException;
 import ittalents.javaee1.exceptions.NotLoggedException;
-import ittalents.javaee1.models.User;
+import ittalents.javaee1.models.pojo.User;
 import ittalents.javaee1.models.dto.*;
 import ittalents.javaee1.util.CryptWithMD5;
 import ittalents.javaee1.util.ResponseMessage;

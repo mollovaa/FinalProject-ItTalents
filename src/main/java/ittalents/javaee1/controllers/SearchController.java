@@ -2,16 +2,16 @@ package ittalents.javaee1.controllers;
 
 import ittalents.javaee1.exceptions.BadRequestException;
 import ittalents.javaee1.exceptions.InvalidInputException;
-import ittalents.javaee1.hibernate.SearchHistoryRepository;
-import ittalents.javaee1.hibernate.SearchQueryRepository;
-import ittalents.javaee1.models.SearchHistory;
-import ittalents.javaee1.models.User;
-import ittalents.javaee1.models.Video;
+import ittalents.javaee1.exceptions.NotLoggedException;
+import ittalents.javaee1.repository.SearchQueryRepository;
+import ittalents.javaee1.models.pojo.SearchHistory;
+import ittalents.javaee1.models.pojo.User;
+import ittalents.javaee1.models.pojo.Video;
 import ittalents.javaee1.models.dto.SearchablePlaylistDTO;
 import ittalents.javaee1.models.dto.SearchableUserDTO;
 import ittalents.javaee1.models.dto.SearchableVideoDTO;
 import ittalents.javaee1.models.search.Filter;
-import ittalents.javaee1.models.SearchQuery;
+import ittalents.javaee1.models.pojo.SearchQuery;
 import ittalents.javaee1.models.search.SearchType;
 import ittalents.javaee1.models.search.Searchable;
 
@@ -59,6 +59,39 @@ public class SearchController extends GlobalController {
         }
     }
 
+    private List<SearchableVideoDTO> getOnlyPublicVideosWithoutFilter(String search_query, HttpSession session) {
+        try {
+            long currentUserId = SessionManager.getLoggedUserId(session);
+            return getSearchedVideos(search_query)
+                    .stream()
+                    .filter(video -> video.getUploaderId() == currentUserId     //all that are user`s have to be shown
+                            || !video.isIsprivate())                               //OR all that are not private
+                    .collect(Collectors.toList());
+        } catch (NotLoggedException e) {
+            return getSearchedVideos(search_query)
+                    .stream()
+                    .filter(video -> !video.isIsprivate())                          //all that are not private
+                    .collect(Collectors.toList());
+        }
+    }
+
+    private List<SearchableVideoDTO> getOnlyPublicVideosWithFilter(String search_query, HttpSession session,
+                                                                   Filter myFilter) throws InvalidInputException {
+        try {
+            long currentUserId = SessionManager.getLoggedUserId(session);
+            return getFilteredVideos(search_query, myFilter)
+                    .stream()
+                    .filter(video -> video.getUploaderId() == currentUserId     //all that are user`s have to be shown
+                            || !video.isIsprivate())                               //OR all that are not private
+                    .collect(Collectors.toList());
+        } catch (NotLoggedException e) {
+            return getFilteredVideos(search_query, myFilter)
+                    .stream()
+                    .filter(video -> !video.isIsprivate())                          //all that are not private
+                    .collect(Collectors.toList());
+        }
+    }
+
     @GetMapping(value = "/search")
     public Object search(@RequestParam("q") String search_query, HttpSession session) throws BadRequestException {
         if (isValidString(search_query)) {
@@ -69,7 +102,9 @@ public class SearchController extends GlobalController {
             }
             List<Searchable> result = new ArrayList<>();
             result.addAll(getSearchedUsers(search_query));
-            result.addAll(getSearchedVideos(search_query));
+
+            result.addAll(getOnlyPublicVideosWithoutFilter(search_query, session));
+
             result.addAll(getSearchedPlaylists(search_query));
             if (result.isEmpty()) {
                 return new ResponseMessage(EMPTY_SEARCH, HttpStatus.OK.value(), LocalDateTime.now());
@@ -102,7 +137,7 @@ public class SearchController extends GlobalController {
                     result.addAll(getSearchedPlaylists(search_query));
                 } else {
                     //Video Filters
-                    result.addAll(getFilteredVideos(search_query, myFilter));
+                    result.addAll(getOnlyPublicVideosWithFilter(search_query, session, myFilter));
                 }
                 if (result.isEmpty()) {
                     return new ResponseMessage(EMPTY_SEARCH, HttpStatus.OK.value(), LocalDateTime.now());

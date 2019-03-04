@@ -1,7 +1,7 @@
 package ittalents.javaee1.util;
 
-import ittalents.javaee1.models.User;
-import ittalents.javaee1.models.Video;
+import ittalents.javaee1.models.pojo.User;
+import ittalents.javaee1.models.pojo.Video;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 

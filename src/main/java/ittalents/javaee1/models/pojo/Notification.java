@@ -1,4 +1,4 @@
-package ittalents.javaee1.models;
+package ittalents.javaee1.models.pojo;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

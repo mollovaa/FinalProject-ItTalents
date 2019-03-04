@@ -6,8 +6,8 @@ import ittalents.javaee1.exceptions.InvalidInputException;
 import ittalents.javaee1.exceptions.NotLoggedException;
 import ittalents.javaee1.exceptions.PlaylistNotFoundException;
 import ittalents.javaee1.exceptions.VideoNotFoundException;
-import ittalents.javaee1.models.Playlist;
-import ittalents.javaee1.models.Video;
+import ittalents.javaee1.models.pojo.Playlist;
+import ittalents.javaee1.models.pojo.Video;
 
 import ittalents.javaee1.util.ResponseMessage;
 import org.springframework.http.HttpStatus;
@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpSession;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 
 @RestController
@@ -26,6 +28,7 @@ public class PlaylistController extends GlobalController {
     private static final String VIDEO_ALREADY_ADDED_TO_PLAYLIST = "Video already added to playlist!";
     private static final String SUCCESSFULLY_REMOVED_PLAYLIST = "Successfully removed a playlist!";
     private static final String INVALID_PLAYLIST_NAME = "Invalid playlist name!";
+    private static final String CANNOT_ADD_PRIVATE_VIDEO_TO_PLAYLIST = "Cannot add private video to playlist!";
 
     private void validatePlaylist(Playlist playlist) throws InvalidInputException {
         if (!isValidString(playlist.getPlaylistName())) {
@@ -53,6 +56,18 @@ public class PlaylistController extends GlobalController {
         return convertToViewPlaylistDTO(playlistRepository.save(playlist));
     }
 
+    @GetMapping(value = "/{playlistId}/videos/all")
+    public Object showVideos(@PathVariable long playlistId) {
+        List<Video> videos = playlistRepository.getByPlaylistId(playlistId).getVideosInPlaylist();
+        if (videos.isEmpty()) {
+            return new ResponseMessage("Empty playlist!", HttpStatus.OK.value(), LocalDateTime.now());
+        }
+        return videos
+                .stream()
+                .map(this::convertToSearchableVideoDTO)
+                .collect(Collectors.toList());
+    }
+
     @DeleteMapping(value = "/{playlistId}/remove")
     public Object removePlaylist(@PathVariable long playlistId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
@@ -77,14 +92,17 @@ public class PlaylistController extends GlobalController {
         }
         if (!playlistRepository.existsById(playlistId)) {
             throw new PlaylistNotFoundException();
-        }
+        }                                               //only public videos can be added to playlist:
         if (!videoRepository.existsById(videoId)) {
             throw new VideoNotFoundException();
         }
-        Playlist playlist = playlistRepository.findById(playlistId).get();
-        Video video = videoRepository.findById(videoId).get();
+        Playlist playlist = playlistRepository.getByPlaylistId(playlistId);
+        Video video = videoRepository.getByVideoId(videoId);
         if (playlist.getOwnerId() != SessionManager.getLoggedUserId(session)) {
             throw new AccessDeniedException();
+        }
+        if (video.isPrivate()) {
+            throw new BadRequestException(CANNOT_ADD_PRIVATE_VIDEO_TO_PLAYLIST);
         }
         if (playlist.getVideosInPlaylist().contains(video)) {
             throw new BadRequestException(VIDEO_ALREADY_ADDED_TO_PLAYLIST);
@@ -104,11 +122,11 @@ public class PlaylistController extends GlobalController {
         if (!playlistRepository.existsById(playlistId)) {
             throw new PlaylistNotFoundException();
         }
-        if (!videoRepository.existsById(videoId)) {
+        if (!videoRepository.existsById(videoId) || videoRepository.getByVideoId(videoId).isPrivate()) {
             throw new VideoNotFoundException();
         }
-        Playlist playlist = playlistRepository.findById(playlistId).get();
-        Video video = videoRepository.findById(videoId).get();
+        Playlist playlist = playlistRepository.getByPlaylistId(playlistId);
+        Video video = videoRepository.getByVideoId(videoId);
         if (playlist.getOwnerId() != SessionManager.getLoggedUserId(session)) {
             throw new AccessDeniedException();
         }
