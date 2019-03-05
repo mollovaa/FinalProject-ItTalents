@@ -22,7 +22,7 @@ public class SearchableVideoDTO implements Searchable {
     @JsonIgnore
     private long uploaderId;
     @JsonIgnore
-    private boolean isprivate;    //vijda se!!!!!!!!!!!!!!!!
+    private boolean isprivate;
 
     @Override
     public SearchType getType() {

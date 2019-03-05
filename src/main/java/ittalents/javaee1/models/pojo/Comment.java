@@ -1,11 +1,15 @@
 package ittalents.javaee1.models.pojo;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import ittalents.javaee1.models.dto.CommentDTO;
+import ittalents.javaee1.models.dto.ViewCommentDTO;
+import ittalents.javaee1.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Entity;
@@ -27,7 +31,7 @@ import java.util.List;
 @ToString
 @Entity
 @Table(name = "comments")
-public class Comment {
+public class Comment implements CommentDTO {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -51,6 +55,13 @@ public class Comment {
     @OneToMany(mappedBy = "responseToId", cascade = {CascadeType.ALL}, orphanRemoval = true)
     private List<Comment> responses = new ArrayList<>();
 
+    @Autowired
+    private UserRepository userRepository;
 
-
+    @Override
+    public ViewCommentDTO convertToCommentDTO() {
+        return new ViewCommentDTO(this.commentId, this.message, this.dateOfPublication,
+                this.numberOfLikes, this.numberOfDislikes,
+                userRepository.findById(this.publisherId).get().getFullName(), this.responses.size());
+    }
 }

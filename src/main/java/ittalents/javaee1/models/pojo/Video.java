@@ -1,12 +1,17 @@
 package ittalents.javaee1.models.pojo;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import ittalents.javaee1.models.dto.SearchableVideoDTO;
+import ittalents.javaee1.models.dto.VideoDTOs;
+import ittalents.javaee1.models.dto.ViewVideoDTO;
 import ittalents.javaee1.models.search.SearchType;
 import ittalents.javaee1.models.search.Searchable;
+import ittalents.javaee1.repository.UserRepository;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -28,7 +33,7 @@ import java.util.Set;
 @ToString
 @Entity
 @Table(name = "videos")
-public class Video implements Searchable {
+public class Video implements Searchable, VideoDTOs {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -68,5 +73,22 @@ public class Video implements Searchable {
     @Override
     public SearchType getType() {
         return SearchType.VIDEO;
+    }
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Override
+    public ViewVideoDTO convertToViewVideoDTO() {
+        return new ViewVideoDTO(this.videoId, this.title, this.category, this.description, this.URL,
+                this.uploadDate, this.duration, this.numberOfLikes, this.numberOfDislikes, this.numberOfViews,
+                userRepository.findById(this.uploaderId).get().getFullName(), this.comments.size());
+    }
+
+    @Override
+    public SearchableVideoDTO convertToSearchableVideoDTO() {
+        return new SearchableVideoDTO(this.videoId, this.title,
+                userRepository.findById(this.uploaderId).get().getFullName(),
+                this.uploaderId, this.isPrivate);
     }
 }

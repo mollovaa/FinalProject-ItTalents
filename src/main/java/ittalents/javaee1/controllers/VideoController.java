@@ -16,6 +16,7 @@ import ittalents.javaee1.util.ResponseMessage;
 import ittalents.javaee1.util.MailManager;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -62,6 +63,9 @@ public class VideoController extends GlobalController {
         if (!isValidString(video.getCategory()) || (!VideoCategory.contains(video.getCategory()))) {
             throw new InvalidInputException(INVALID_VIDEO_CATEGORY);
         }
+    }
+
+    private void setInitialVideoValues(Video video) {
         video.setUploadDate(LocalDate.now());
         video.setNumberOfDislikes(0);
         video.setNumberOfLikes(0);
@@ -106,7 +110,7 @@ public class VideoController extends GlobalController {
 
         video.setNumberOfViews(video.getNumberOfViews() + 1);
         videoRepository.save(video);
-        return this.convertToViewVideoDTO(video);
+        return video.convertToViewVideoDTO();
     }
 
     private List<Comment> getCommentsWithoutResponses(Video video) {
@@ -131,7 +135,7 @@ public class VideoController extends GlobalController {
             return new ResponseMessage(NO_COMMENTS, HttpStatus.OK.value(), LocalDateTime.now());
         }
         return comments.stream()
-                .map(this::convertToCommentDTO)
+                .map(Comment::convertToCommentDTO)
                 .collect(Collectors.toList());
     }
 
@@ -170,7 +174,7 @@ public class VideoController extends GlobalController {
         this.filterComments(comments, filter);
 
         return comments.stream()
-                .map(this::convertToCommentDTO)
+                .map(Comment::convertToCommentDTO)
                 .collect(Collectors.toList());
     }
 
@@ -221,7 +225,7 @@ public class VideoController extends GlobalController {
         if (!video.isPrivate()) {
             this.notifySubscribers(user);
         }
-        return convertToViewVideoDTO(videoRepository.save(video));
+        return videoRepository.save(video).convertToViewVideoDTO();
     }
 
     @PostMapping(value = "/add")
@@ -230,8 +234,9 @@ public class VideoController extends GlobalController {
             throw new NotLoggedException();
         }
         this.validateVideo(video);
+        this.setInitialVideoValues(video);
         video.setUploaderId(SessionManager.getLoggedUserId(session));
-        return convertToViewVideoDTO(videoRepository.save(video));
+        return videoRepository.save(video).convertToViewVideoDTO();
     }
 
     @DeleteMapping(value = "/{videoId}/remove")
@@ -287,6 +292,7 @@ public class VideoController extends GlobalController {
         this.saveUserAndVideo(user, video);
     }
 
+    @Transactional
     @PutMapping(value = "/{videoId}/like")
     public Object likeVideo(@PathVariable long videoId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
@@ -307,9 +313,10 @@ public class VideoController extends GlobalController {
             this.removeDislike(user, video);
         }
         this.addLike(user, video);
-        return convertToViewVideoDTO(video);
+        return video.convertToViewVideoDTO();
     }
 
+    @Transactional
     @PutMapping(value = "/{videoId}/dislike")
     public Object dislikeVideo(@PathVariable long videoId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
@@ -330,9 +337,10 @@ public class VideoController extends GlobalController {
             this.removeLike(user, video);
         }
         this.addDislike(user, video);
-        return convertToViewVideoDTO(video);
+        return video.convertToViewVideoDTO();
     }
 
+    @Transactional
     @PutMapping(value = "/{videoId}/dislikes/remove")
     public Object removeDislike(@PathVariable long videoId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
@@ -350,9 +358,10 @@ public class VideoController extends GlobalController {
             throw new BadRequestException(CANNOT_REMOVE_DISLIKE);
         }
         this.removeDislike(user, video);
-        return convertToViewVideoDTO(videoRepository.save(video));
+        return videoRepository.save(video).convertToViewVideoDTO();
     }
 
+    @Transactional
     @PutMapping(value = "/{videoId}/likes/remove")
     public Object removeLike(@PathVariable long videoId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
@@ -370,7 +379,7 @@ public class VideoController extends GlobalController {
             throw new BadRequestException(CANNOT_REMOVE_LIKE);
         }
         this.removeLike(user, video);
-        return convertToViewVideoDTO(videoRepository.save(video));
+        return videoRepository.save(video).convertToViewVideoDTO();
     }
 
 

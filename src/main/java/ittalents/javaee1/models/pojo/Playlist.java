@@ -1,11 +1,17 @@
 package ittalents.javaee1.models.pojo;
 
+import ittalents.javaee1.models.dto.PlaylistDTOs;
+import ittalents.javaee1.models.dto.SearchablePlaylistDTO;
+import ittalents.javaee1.models.dto.SearchableVideoDTO;
+import ittalents.javaee1.models.dto.ViewPlaylistDTO;
 import ittalents.javaee1.models.search.SearchType;
 import ittalents.javaee1.models.search.Searchable;
+import ittalents.javaee1.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -17,6 +23,7 @@ import javax.persistence.ManyToMany;
 import javax.persistence.Table;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Getter
 @Setter
@@ -24,7 +31,7 @@ import java.util.List;
 @NoArgsConstructor
 @Entity
 @Table(name = "playlists")
-public class Playlist implements Searchable {
+public class Playlist implements Searchable, PlaylistDTOs {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -47,5 +54,27 @@ public class Playlist implements Searchable {
     @Override
     public SearchType getType() {
         return SearchType.PLAYLIST;
+    }
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Override
+    public SearchablePlaylistDTO convertToSearchablePlaylistDTO() {
+        return new SearchablePlaylistDTO(this.playlistId, this.playlistName,
+                userRepository.findById(this.ownerId).get().getFullName(),
+                this.videosInPlaylist.size());
+    }
+
+    @Override
+    public ViewPlaylistDTO convertToViewPlaylistDTO() {
+        List<Video> videos = this.videosInPlaylist;
+        List<SearchableVideoDTO> videosToShow = new ArrayList<>();
+        videosToShow.addAll(videos
+                .stream()
+                .map(Video::convertToSearchableVideoDTO)
+                .collect(Collectors.toList()));
+        return new ViewPlaylistDTO(this.playlistId, this.playlistName,
+                userRepository.findById(this.ownerId).get().getFullName(), videosToShow.size(), videosToShow);
     }
 }

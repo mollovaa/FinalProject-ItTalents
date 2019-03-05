@@ -10,6 +10,7 @@ import ittalents.javaee1.models.dto.ViewCommentDTO;
 import ittalents.javaee1.models.pojo.Video;
 import ittalents.javaee1.util.ResponseMessage;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
@@ -18,6 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping(value = "/comments")
@@ -54,9 +56,10 @@ public class CommentController extends GlobalController {
             return new ResponseMessage(NO_RESPONSES, HttpStatus.OK.value(), LocalDateTime.now());
         }
         List<ViewCommentDTO> responsesToShow = new ArrayList<>();
-        for (Comment c : responses) {
-            responsesToShow.add(convertToCommentDTO(c));
-        }
+        responsesToShow.addAll(responses
+                .stream()
+                .map(Comment::convertToCommentDTO)
+                .collect(Collectors.toList()));
         return responsesToShow;
     }
 
@@ -70,9 +73,10 @@ public class CommentController extends GlobalController {
         }
     }
 
-    //todo check if video is private
+
     @PostMapping(value = "/add/toVideo/{videoId}")
-    public Object commentVideo(@RequestBody Comment comment, @PathVariable long videoId, HttpSession session) throws BadRequestException {
+    public Object commentVideo(@RequestBody Comment comment, @PathVariable long videoId, HttpSession session)
+            throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
@@ -88,10 +92,10 @@ public class CommentController extends GlobalController {
         comment.setPublisherId(SessionManager.getLoggedUserId(session));
         comment.setVideoId(videoId);
         comment.setResponseToId(null);
-
+        commentRepository.save(comment);
         this.notifyVideosOwnerForComment(videoId, session);
 
-        return convertToCommentDTO(commentRepository.save(comment));
+        return comment.convertToCommentDTO();
     }
 
     //notify base comment`s owner
@@ -115,11 +119,12 @@ public class CommentController extends GlobalController {
         comment.setPublisherId(SessionManager.getLoggedUserId(session));
         comment.setVideoId(commentRepository.findById(commentId).get().getVideoId());
         comment.setResponseToId(commentId);
-
+        commentRepository.save(comment);
         this.notifyBaseCommentsOwner(commentId, session);
 
-        return convertToCommentDTO(commentRepository.save(comment));
+        return comment.convertToCommentDTO();
     }
+
 
     private void saveUserAndComment(User user, Comment comment) {
         commentRepository.save(comment);
@@ -154,6 +159,7 @@ public class CommentController extends GlobalController {
         this.saveUserAndComment(user, comment);
     }
 
+    @Transactional
     @PutMapping(value = "/{commentId}/like")
     public Object likeComment(@PathVariable long commentId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
@@ -171,9 +177,10 @@ public class CommentController extends GlobalController {
             this.removeDislike(user, comment);
         }
         this.addLike(user, comment);
-        return convertToCommentDTO(comment);
+        return comment.convertToCommentDTO();
     }
 
+    @Transactional
     @PutMapping(value = "/{commentId}/likes/remove")
     public Object removeLike(@PathVariable long commentId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
@@ -188,9 +195,10 @@ public class CommentController extends GlobalController {
             throw new BadRequestException(CANNOT_REMOVE_LIKE);
         }
         this.removeLike(user, comment);
-        return convertToCommentDTO(comment);
+        return comment.convertToCommentDTO();
     }
 
+    @Transactional
     @PutMapping(value = "/{commentId}/dislikes/remove")
     public Object removeDislike(@PathVariable long commentId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
@@ -205,9 +213,10 @@ public class CommentController extends GlobalController {
             throw new BadRequestException(CANNOT_REMOVE_DISLIKE);
         }
         this.removeDislike(user, comment);
-        return convertToCommentDTO(comment);
+        return comment.convertToCommentDTO();
     }
 
+    @Transactional
     @PutMapping(value = "/{commentId}/dislike")
     public Object dislikeComment(@PathVariable long commentId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
@@ -225,7 +234,7 @@ public class CommentController extends GlobalController {
             this.removeLike(user, comment);
         }
         this.addDislike(user, comment);
-        return convertToCommentDTO(comment);
+        return comment.convertToCommentDTO();
     }
 
     @DeleteMapping(value = "/{commentId}/remove")

@@ -103,52 +103,17 @@ public abstract class GlobalController {
         return text != null && !text.isEmpty();
     }
 
-    ViewCommentDTO convertToCommentDTO(Comment comment) {
-        return new ViewCommentDTO(comment.getCommentId(), comment.getMessage(), comment.getDateOfPublication(),
-                comment.getNumberOfLikes(), comment.getNumberOfDislikes(),
-                userRepository.findById(comment.getPublisherId()).get().getFullName(), comment.getResponses().size());
-    }
-
-    ViewVideoDTO convertToViewVideoDTO(Video video) {
-        return new ViewVideoDTO(video.getVideoId(), video.getTitle(), video.getCategory(), video.getDescription(),
-                video.getURL(), video.getUploadDate(), video.getDuration(), video.getNumberOfLikes(),
-                video.getNumberOfDislikes(), video.getNumberOfViews(),
-                userRepository.findById(video.getUploaderId()).get().getFullName(), video.getComments().size());
-    }
-
-    SearchableVideoDTO convertToSearchableVideoDTO(Video video) {
-        return new SearchableVideoDTO(video.getVideoId(), video.getTitle(),
-                userRepository.findById(video.getUploaderId()).get().getFullName(),
-                video.getUploaderId(),  video.isPrivate());
-    }
-
-    SearchablePlaylistDTO convertToSearchablePlaylistDTO(Playlist playlist) {
-        return new SearchablePlaylistDTO(playlist.getPlaylistId(), playlist.getPlaylistName(),
-                userRepository.findById(playlist.getOwnerId()).get().getFullName(),
-                playlist.getVideosInPlaylist().size());
-    }
-
-    ViewPlaylistDTO convertToViewPlaylistDTO(Playlist playlist) {
-        List<Video> videos = playlist.getVideosInPlaylist();
-        List<SearchableVideoDTO> videosToShow = new ArrayList<>();
-        for (Video v : videos) {
-            videosToShow.add(convertToSearchableVideoDTO(v));
-        }
-        return new ViewPlaylistDTO(playlist.getPlaylistId(), playlist.getPlaylistName(),
-                userRepository.findById(playlist.getOwnerId()).get().getFullName(), videosToShow.size(), videosToShow);
-    }
-
     ViewProfileUserDTO convertToViewProfileUserDTO(User user) {
         List<SearchableVideoDTO> videosToShow = new ArrayList<>();
         videosToShow.addAll(user.getVideos()
                 .stream()
-                .map(this::convertToSearchableVideoDTO)
+                .map(Video::convertToSearchableVideoDTO)
                 .collect(Collectors.toList()));
 
         List<SearchablePlaylistDTO> playlistsToShow = new ArrayList<>();
         playlistsToShow.addAll(user.getPlaylists()
                 .stream()
-                .map(this::convertToSearchablePlaylistDTO)
+                .map(Playlist::convertToSearchablePlaylistDTO)
                 .collect(Collectors.toList()));
 
         return new ViewProfileUserDTO(user.getUserId(), user.getMySubscribers().size(), user.getFullName(),

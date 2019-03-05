@@ -11,6 +11,7 @@ import ittalents.javaee1.models.pojo.Video;
 
 import ittalents.javaee1.util.ResponseMessage;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
@@ -29,6 +30,7 @@ public class PlaylistController extends GlobalController {
     private static final String SUCCESSFULLY_REMOVED_PLAYLIST = "Successfully removed a playlist!";
     private static final String INVALID_PLAYLIST_NAME = "Invalid playlist name!";
     private static final String CANNOT_ADD_PRIVATE_VIDEO_TO_PLAYLIST = "Cannot add private video to playlist!";
+    private static final String EMPTY_PLAYLIST = "Empty playlist!";
 
     private void validatePlaylist(Playlist playlist) throws InvalidInputException {
         if (!isValidString(playlist.getPlaylistName())) {
@@ -42,7 +44,7 @@ public class PlaylistController extends GlobalController {
         if (!playlistRepository.existsById(playlistId)) {
             throw new PlaylistNotFoundException();
         }
-        return convertToViewPlaylistDTO(playlistRepository.findById(playlistId).get());
+        return playlistRepository.findById(playlistId).get().convertToViewPlaylistDTO();
     }
 
     @PostMapping(value = "/add")
@@ -53,18 +55,18 @@ public class PlaylistController extends GlobalController {
         Playlist playlist = new Playlist(name);
         validatePlaylist(playlist);
         playlist.setOwnerId(SessionManager.getLoggedUserId(session));
-        return convertToViewPlaylistDTO(playlistRepository.save(playlist));
+        return playlistRepository.save(playlist).convertToViewPlaylistDTO();
     }
 
     @GetMapping(value = "/{playlistId}/videos/all")
     public Object showVideos(@PathVariable long playlistId) {
         List<Video> videos = playlistRepository.getByPlaylistId(playlistId).getVideosInPlaylist();
         if (videos.isEmpty()) {
-            return new ResponseMessage("Empty playlist!", HttpStatus.OK.value(), LocalDateTime.now());
+            return new ResponseMessage(EMPTY_PLAYLIST, HttpStatus.OK.value(), LocalDateTime.now());
         }
         return videos
                 .stream()
-                .map(this::convertToSearchableVideoDTO)
+                .map(Video::convertToSearchableVideoDTO)
                 .collect(Collectors.toList());
     }
 
@@ -84,6 +86,7 @@ public class PlaylistController extends GlobalController {
         return new ResponseMessage(SUCCESSFULLY_REMOVED_PLAYLIST, HttpStatus.OK.value(), LocalDateTime.now());
     }
 
+    @Transactional
     @PutMapping(value = "/{playlistId}/videos/{videoId}/add")
     public Object addVideoToPlaylist(@PathVariable long playlistId, @PathVariable long videoId, HttpSession session)
             throws BadRequestException {
@@ -110,9 +113,10 @@ public class PlaylistController extends GlobalController {
         playlist.getVideosInPlaylist().add(video);
         video.getPlaylistContainingVideo().add(playlist);
         videoRepository.save(video);
-        return convertToViewPlaylistDTO(playlistRepository.save(playlist));
+        return playlistRepository.save(playlist).convertToViewPlaylistDTO();
     }
 
+    @Transactional
     @PutMapping(value = "/{playlistId}/videos/{videoId}/remove")
     public Object removeVideoFromPlaylist(@PathVariable long playlistId, @PathVariable long videoId,
                                           HttpSession session) throws BadRequestException {
@@ -136,7 +140,7 @@ public class PlaylistController extends GlobalController {
         playlist.getVideosInPlaylist().remove(video);
         video.getPlaylistContainingVideo().remove(playlist);
         videoRepository.save(video);
-        return convertToViewPlaylistDTO(playlistRepository.save(playlist));
+        return playlistRepository.save(playlist).convertToViewPlaylistDTO();
     }
 }
 
