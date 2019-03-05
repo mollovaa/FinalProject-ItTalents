@@ -6,7 +6,7 @@ import ittalents.javaee1.exceptions.InvalidJsonBodyException;
 import ittalents.javaee1.exceptions.NotLoggedException;
 import ittalents.javaee1.models.pojo.User;
 import ittalents.javaee1.models.dto.*;
-import ittalents.javaee1.util.CryptWithMD5;
+import ittalents.javaee1.util.CryptWithBCrypt;
 import ittalents.javaee1.util.ResponseMessage;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -40,8 +40,8 @@ public class UserController extends GlobalController {
 	private static final String MUST_BE_DIFFERENT_FROM_THE_OLD = "New password must be different from the old!";
 	private static final int MIN_PASS_LENGTH = 5;
 	private static final String INVALID_NEW_PASSWORD = "Invalid new Password";
-	public static final String NO_VIDEOS = "No videos!";
-	public static final String NO_PLAYLISTS = "No playlists";
+	private static final String NO_VIDEOS = "No videos!";
+	private static final String NO_PLAYLISTS = "No playlists";
 	
 	@PostMapping(value = "/logout")
 	public Object logout(HttpSession session) throws BadRequestException {
@@ -77,7 +77,7 @@ public class UserController extends GlobalController {
 					.getVideos().stream()
 					.map(video -> convertToSearchableVideoDTO(video))
 					.collect(Collectors.toList());
-			if(videos.isEmpty()){
+			if (videos.isEmpty()) {
 				return new ResponseMessage(NO_VIDEOS, HttpStatus.OK.value(), LocalDateTime.now());
 			}
 			return videos;
@@ -93,7 +93,7 @@ public class UserController extends GlobalController {
 					.getPlaylists().stream()
 					.map(playlist -> convertToSearchablePlaylistDTO(playlist))
 					.collect(Collectors.toList());
-			if(playlists.isEmpty()){
+			if (playlists.isEmpty()) {
 				return new ResponseMessage(NO_PLAYLISTS, HttpStatus.OK.value(), LocalDateTime.now());
 			}
 			return playlists;
@@ -109,7 +109,7 @@ public class UserController extends GlobalController {
 		}
 		if (SessionManager.isLogged(session)) {
 			User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
-			if (!CryptWithMD5.cryptWithMD5(password).equals(user.getPassword())) {
+			if (!CryptWithBCrypt.checkPassword(password,user.getPassword())) {
 				throw new InvalidInputException(INCORRECT_PASSWORD);
 			}
 			logout(session);
@@ -125,19 +125,19 @@ public class UserController extends GlobalController {
 	public Object editPassword(@RequestBody ChangePasswordDTO dto, HttpSession session) throws BadRequestException {
 		if (SessionManager.isLogged(session)) {
 			User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
-			if(!validatePassword(dto.getNewPassword()) || ! validatePassword(dto.getOldPassword())){
+			if (!validatePassword(dto.getNewPassword()) || !validatePassword(dto.getOldPassword())) {
 				throw new InvalidInputException(INCORRECT_PASSWORD);
 			}
-			if (!CryptWithMD5.cryptWithMD5(dto.getOldPassword()).equals(user.getPassword())) {
+			if (!CryptWithBCrypt.checkPassword(dto.getOldPassword(),user.getPassword())) {
 				throw new InvalidInputException(INCORRECT_PASSWORD);
 			}
 			if (dto.getOldPassword().equals(dto.getNewPassword())) {
 				throw new InvalidInputException(MUST_BE_DIFFERENT_FROM_THE_OLD);
 			}
-			if(!validatePassword(dto.getNewPassword())) {
+			if (!validatePassword(dto.getNewPassword())) {
 				throw new InvalidInputException(INVALID_NEW_PASSWORD);
 			}
-			user.setPassword(CryptWithMD5.cryptWithMD5(dto.getNewPassword()));
+			user.setPassword(CryptWithBCrypt.hashPassword(dto.getNewPassword()));
 			userRepository.save(user);
 			return new ResponseMessage(MSG_PASSWORD_CHANGED, HttpStatus.OK.value(), LocalDateTime.now());
 		} else {
@@ -203,7 +203,7 @@ public class UserController extends GlobalController {
 		if (userRepository.existsByUsername(userLoginDTO.getUsername())) {
 			
 			User dbUser = userRepository.getByUsername(userLoginDTO.getUsername());
-			if (CryptWithMD5.cryptWithMD5(userLoginDTO.getPassword()).equals(dbUser.getPassword())) {
+			if (CryptWithBCrypt.checkPassword(userLoginDTO.getPassword(),dbUser.getPassword())) {
 				UserSessionDTO userSessionDTO = new UserSessionDTO(
 						dbUser.getUserId(),
 						dbUser.getAge(),
@@ -229,7 +229,8 @@ public class UserController extends GlobalController {
 		if (!userRepository.existsByUsername(userRegisterDTO.getUsername())) {
 			if (!userRepository.existsByEmail(userRegisterDTO.getEmail())) {
 				userRepository.save(new User(userRegisterDTO.getAge(), userRegisterDTO.getFullName(),
-						userRegisterDTO.getUsername(), CryptWithMD5.cryptWithMD5(userRegisterDTO.getPassword()),
+						userRegisterDTO.getUsername(),
+						CryptWithBCrypt.hashPassword(userRegisterDTO.getPassword()),
 						userRegisterDTO.getEmail()));
 				return new ResponseMessage(SUCCESSFUL_REGISTRATION, HttpStatus.OK.value(), LocalDateTime.now());
 			} else {
@@ -245,7 +246,7 @@ public class UserController extends GlobalController {
 		if (username == null || username.isEmpty() || username.contains(" ")) {
 			throw new InvalidInputException(WRONG_CREDENTIALS);
 		}
-		if(!validatePassword(user.getPassword())){
+		if (!validatePassword(user.getPassword())) {
 			throw new InvalidInputException(WRONG_CREDENTIALS);
 		}
 	}
