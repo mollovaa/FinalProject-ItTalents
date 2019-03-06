@@ -5,9 +5,8 @@ import ittalents.javaee1.util.exceptions.BadRequestException;
 
 import ittalents.javaee1.util.exceptions.NotFoundException;
 import ittalents.javaee1.util.exceptions.NotLoggedException;
-import ittalents.javaee1.repository.*;
+import ittalents.javaee1.models.repository.*;
 import ittalents.javaee1.util.ResponseMessage;
-import ittalents.javaee1.util.StorageManager;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,12 +40,10 @@ public abstract class GlobalController {
 	@Autowired
 	WatchHistoryRepository watchHistoryRepository;
 	@Autowired
-	StorageManager storageManager;
-	@Autowired
 	SearchHistoryRepository searchHistoryRepository;
 	
 	
-	private static Logger logger = LogManager.getLogger(GlobalController.class);
+	protected static Logger logger = LogManager.getLogger(GlobalController.class);
 	
 	@ExceptionHandler({Exception.class})
 	@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)

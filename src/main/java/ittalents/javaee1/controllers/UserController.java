@@ -1,6 +1,7 @@
 package ittalents.javaee1.controllers;
 
 import ittalents.javaee1.util.SessionManager;
+import ittalents.javaee1.util.AmazonClient;
 import ittalents.javaee1.util.exceptions.BadRequestException;
 import ittalents.javaee1.util.exceptions.InvalidInputException;
 import ittalents.javaee1.util.exceptions.InvalidJsonBodyException;
@@ -9,6 +10,7 @@ import ittalents.javaee1.models.pojo.User;
 import ittalents.javaee1.models.dto.*;
 import ittalents.javaee1.util.CryptWithBCrypt;
 import ittalents.javaee1.util.ResponseMessage;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,6 +45,9 @@ public class UserController extends GlobalController {
 	private static final String INVALID_NEW_PASSWORD = "Invalid new Password";
 	private static final String NO_VIDEOS = "No videos!";
 	private static final String NO_PLAYLISTS = "No playlists";
+	
+	@Autowired
+	private AmazonClient amazonClient;
 	
 	@PostMapping(value = "/logout")
 	public Object logout(HttpSession session) throws BadRequestException {
@@ -115,7 +120,8 @@ public class UserController extends GlobalController {
 				throw new InvalidInputException(INCORRECT_PASSWORD);
 			}
 			logout(session);
-			storageManager.deleteFolder(user);
+			//delete all video urls from amazon storage
+			user.getVideos().stream().map(video -> amazonClient.deleteFileFromS3Bucket(video.getURL()));
 			userRepository.deleteById(user.getUserId());
 			return new ResponseMessage(ACCOUNT_DELETED, HttpStatus.OK.value(), LocalDateTime.now());
 		} else {

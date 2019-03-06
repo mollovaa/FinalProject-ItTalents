@@ -1,6 +1,7 @@
 package ittalents.javaee1.controllers;
 
 import ittalents.javaee1.util.SessionManager;
+import ittalents.javaee1.util.AmazonClient;
 import ittalents.javaee1.util.exceptions.AccessDeniedException;
 import ittalents.javaee1.util.exceptions.BadRequestException;
 import ittalents.javaee1.util.exceptions.InvalidInputException;
@@ -16,13 +17,13 @@ import ittalents.javaee1.models.search.CommentFilter;
 import ittalents.javaee1.util.ResponseMessage;
 import ittalents.javaee1.util.MailManager;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpSession;
-import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -47,9 +48,11 @@ public class VideoController extends GlobalController {
 	private static final String INVALID_VIDEO_CATEGORY = "Invalid category!";
 	private static final String CANNOT_REMOVE_DISLIKE = "Video not disliked!";
 	private static final String CANNOT_REMOVE_LIKE = "Video not liked!";
-	
 	private static final String EMPTY_VIDEO_STORAGE = "Empty video storage";
 	private static final String ALREADY_UPLOADED = "Video is already uploaded!";
+	
+	@Autowired
+	private AmazonClient amazonClient;
 	
 	private void validateVideo(Video video) throws InvalidInputException {
 		if (!isValidString(video.getTitle())) {
@@ -179,9 +182,9 @@ public class VideoController extends GlobalController {
 				.collect(Collectors.toList());
 	}
 	
-	@GetMapping(value = "/{videoId}/download")
-	public byte[] downloadVideo(@PathVariable long videoId, HttpSession session) throws
-			BadRequestException, IOException {
+	@GetMapping(value = "/{videoId}/play")
+	public Object playVideo(@PathVariable long videoId, HttpSession session) throws
+			BadRequestException {
 		if (!videoRepository.existsById(videoId)) {
 			throw new VideoNotFoundException();
 		}
@@ -192,7 +195,7 @@ public class VideoController extends GlobalController {
 		if (video.getURL() == null || video.getURL().isEmpty()) {
 			throw new InvalidInputException(EMPTY_VIDEO_STORAGE);
 		}
-		return storageManager.downloadVideo(video);
+		return video.getURL();
 	}
 	
 	private void notifySubscribers(User user) {  //notify all subscribers of current user:
@@ -206,7 +209,7 @@ public class VideoController extends GlobalController {
 	@PostMapping(value = "/{videoId}/upload")
 	public Object uploadVideo(@PathVariable long videoId, @RequestPart(value = "file") MultipartFile file,
 							  HttpSession session)
-			throws BadRequestException, IOException {
+			throws BadRequestException {
 		if (!SessionManager.isLogged(session)) {
 			throw new NotLoggedException();
 		}
@@ -220,7 +223,7 @@ public class VideoController extends GlobalController {
 		if (video.getURL() != null && !video.getURL().isEmpty()) { // video already uploaded
 			throw new InvalidInputException(ALREADY_UPLOADED);
 		}
-		video.setURL(storageManager.uploadVideo(file, video));
+		video.setURL(this.amazonClient.uploadFile(file, video));
 		
 		User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
 		if (!video.isPrivate()) {
@@ -255,9 +258,14 @@ public class VideoController extends GlobalController {
 			}
 			throw new VideoNotFoundException();
 		}
-		storageManager.deleteVideo(video);
+		amazonClient.deleteFileFromS3Bucket(video.getURL());
 		videoRepository.delete(video);
 		return new ResponseMessage(SUCCESSFULLY_REMOVED_VIDEO, HttpStatus.OK.value(), LocalDateTime.now());
+	}
+	
+	@DeleteMapping("/file/deleteFile")
+	public String deleteFile(@RequestPart(value = "url") String fileUrl) {
+		return this.amazonClient.deleteFileFromS3Bucket(fileUrl);
 	}
 	
 	private void saveUserAndVideo(User user, Video video) {

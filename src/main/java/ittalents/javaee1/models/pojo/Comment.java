@@ -3,13 +3,12 @@ package ittalents.javaee1.models.pojo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import ittalents.javaee1.models.dto.CommentDTO;
 import ittalents.javaee1.models.dto.ViewCommentDTO;
-import ittalents.javaee1.repository.UserRepository;
+import ittalents.javaee1.models.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Entity;

@@ -5,7 +5,7 @@ import ittalents.javaee1.util.exceptions.BadRequestException;
 import ittalents.javaee1.util.exceptions.InvalidInputException;
 import ittalents.javaee1.util.exceptions.NotLoggedException;
 import ittalents.javaee1.models.pojo.*;
-import ittalents.javaee1.repository.SearchQueryRepository;
+import ittalents.javaee1.models.repository.SearchQueryRepository;
 import ittalents.javaee1.models.dto.SearchablePlaylistDTO;
 import ittalents.javaee1.models.dto.SearchableUserDTO;
 import ittalents.javaee1.models.dto.SearchableVideoDTO;

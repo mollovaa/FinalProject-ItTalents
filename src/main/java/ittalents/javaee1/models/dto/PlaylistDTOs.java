@@ -1,6 +1,6 @@
 package ittalents.javaee1.models.dto;
 
-import ittalents.javaee1.repository.UserRepository;
+import ittalents.javaee1.models.repository.UserRepository;
 
 public interface PlaylistDTOs {
 

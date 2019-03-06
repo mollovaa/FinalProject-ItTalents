@@ -2,11 +2,10 @@ package ittalents.javaee1.models.pojo;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import ittalents.javaee1.controllers.GlobalController;
 import ittalents.javaee1.models.dto.*;
 import ittalents.javaee1.models.search.SearchType;
 import ittalents.javaee1.models.search.Searchable;
-import ittalents.javaee1.repository.UserRepository;
+import ittalents.javaee1.models.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

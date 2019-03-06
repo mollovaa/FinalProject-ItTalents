@@ -1,4 +1,4 @@
-package ittalents.javaee1.repository;
+package ittalents.javaee1.models.repository;
 
 import ittalents.javaee1.models.pojo.Comment;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -6,12 +6,11 @@ import ittalents.javaee1.models.dto.SearchableVideoDTO;
 import ittalents.javaee1.models.dto.ViewPlaylistDTO;
 import ittalents.javaee1.models.search.SearchType;
 import ittalents.javaee1.models.search.Searchable;
-import ittalents.javaee1.repository.UserRepository;
+import ittalents.javaee1.models.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
