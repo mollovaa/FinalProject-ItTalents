@@ -54,12 +54,9 @@ public class Comment implements CommentDTO {
 
     @OneToMany(mappedBy = "responseToId", cascade = {CascadeType.ALL}, orphanRemoval = true)
     private List<Comment> responses = new ArrayList<>();
-
-    @Autowired
-    private UserRepository userRepository;
-
+    
     @Override
-    public ViewCommentDTO convertToCommentDTO() {
+    public ViewCommentDTO convertToCommentDTO(UserRepository userRepository) {
         return new ViewCommentDTO(this.commentId, this.message, this.dateOfPublication,
                 this.numberOfLikes, this.numberOfDislikes,
                 userRepository.findById(this.publisherId).get().getFullName(), this.responses.size());

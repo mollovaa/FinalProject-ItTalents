@@ -1,17 +1,15 @@
 package ittalents.javaee1.controllers;
 
-import ittalents.javaee1.exceptions.BadRequestException;
-import ittalents.javaee1.exceptions.InvalidInputException;
-import ittalents.javaee1.exceptions.NotLoggedException;
+import ittalents.javaee1.util.SessionManager;
+import ittalents.javaee1.util.exceptions.BadRequestException;
+import ittalents.javaee1.util.exceptions.InvalidInputException;
+import ittalents.javaee1.util.exceptions.NotLoggedException;
+import ittalents.javaee1.models.pojo.*;
 import ittalents.javaee1.repository.SearchQueryRepository;
-import ittalents.javaee1.models.pojo.SearchHistory;
-import ittalents.javaee1.models.pojo.User;
-import ittalents.javaee1.models.pojo.Video;
 import ittalents.javaee1.models.dto.SearchablePlaylistDTO;
 import ittalents.javaee1.models.dto.SearchableUserDTO;
 import ittalents.javaee1.models.dto.SearchableVideoDTO;
 import ittalents.javaee1.models.search.Filter;
-import ittalents.javaee1.models.pojo.SearchQuery;
 import ittalents.javaee1.models.search.SearchType;
 import ittalents.javaee1.models.search.Searchable;
 
@@ -26,7 +24,6 @@ import javax.servlet.http.HttpSession;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -155,21 +152,21 @@ public class SearchController extends GlobalController {
 	private List<SearchableUserDTO> getSearchedUsers(String search_query) {
 		return userRepository.findAllByFullNameContaining(search_query)
 				.stream()
-				.map(user -> convertToSearchableUserDTO(user))
+				.map(user -> user.convertToSearchableDTO())
 				.collect(Collectors.toList());
 	}
 	
 	private List<SearchablePlaylistDTO> getSearchedPlaylists(String search_query) {
 		return playlistRepository.findAllByPlaylistNameContaining(search_query)
 				.stream()
-				.map(this::convertToSearchablePlaylistDTO)
+				.map(playlist -> playlist.convertToSearchablePlaylistDTO(userRepository))
 				.collect(Collectors.toList());
 	}
 	
 	private List<SearchableVideoDTO> getSearchedVideos(String search_query) {
 		return videoRepository.findAllByTitleContaining(search_query)
 				.stream()
-				.map(this::convertToSearchableVideoDTO)
+				.map(video -> video.convertToSearchableVideoDTO(userRepository))
 				.collect(Collectors.toList());
 	}
 	
@@ -180,33 +177,33 @@ public class SearchController extends GlobalController {
 						.findAllByTitleContaining(search_query)
 						.stream()
 						.sorted(Comparator.comparing(Video::getUploadDate).reversed())
-						.map(this::convertToSearchableVideoDTO)
+						.map(video -> video.convertToSearchableVideoDTO(userRepository))
 						.collect(Collectors.toList());
 			case VIEWS:
 				return videoRepository
 						.findAllByTitleContaining(search_query)
 						.stream()
 						.sorted(Comparator.comparing(Video::getNumberOfViews).reversed())
-						.map(this::convertToSearchableVideoDTO)
+						.map(video -> video.convertToSearchableVideoDTO(userRepository))
 						.collect(Collectors.toList());
 			case MOST_LIKES:
 				return videoRepository
 						.findAllByTitleContaining(search_query)
 						.stream()
 						.sorted(Comparator.comparing(Video::getNumberOfLikes).reversed())
-						.map(this::convertToSearchableVideoDTO)
+						.map(video -> video.convertToSearchableVideoDTO(userRepository))
 						.collect(Collectors.toList());
 			case LENGTH_LONG:// only videos without order
 				return videoRepository
 						.findAllByTitleContainingAndDurationGreaterThan(search_query, TWENTY_MINUTES_DURATION)
 						.stream()
-						.map(this::convertToSearchableVideoDTO)
+						.map(video -> video.convertToSearchableVideoDTO(userRepository))
 						.collect(Collectors.toList());
 			case LENGTH_SHORT:
 				return videoRepository
 						.findAllByTitleContainingAndDurationLessThanEqual(search_query, FOUR_MINUTES_DURATION)
 						.stream()
-						.map(this::convertToSearchableVideoDTO)
+						.map(video -> video.convertToSearchableVideoDTO(userRepository))
 						.collect(Collectors.toList());
 			case VIDEOS:
 				return getSearchedVideos(search_query); // only videos without order

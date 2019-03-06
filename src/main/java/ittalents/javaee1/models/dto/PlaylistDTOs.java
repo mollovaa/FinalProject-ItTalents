@@ -1,8 +1,10 @@
 package ittalents.javaee1.models.dto;
 
+import ittalents.javaee1.repository.UserRepository;
+
 public interface PlaylistDTOs {
 
-    SearchablePlaylistDTO convertToSearchablePlaylistDTO();
+    SearchablePlaylistDTO convertToSearchablePlaylistDTO(UserRepository userRepository);
 
-    ViewPlaylistDTO convertToViewPlaylistDTO();
+    ViewPlaylistDTO convertToViewPlaylistDTO(UserRepository userRepository);
 }

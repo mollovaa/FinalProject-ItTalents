@@ -1,9 +1,10 @@
 package ittalents.javaee1.controllers;
 
-import ittalents.javaee1.exceptions.BadRequestException;
-import ittalents.javaee1.exceptions.InvalidInputException;
-import ittalents.javaee1.exceptions.InvalidJsonBodyException;
-import ittalents.javaee1.exceptions.NotLoggedException;
+import ittalents.javaee1.util.SessionManager;
+import ittalents.javaee1.util.exceptions.BadRequestException;
+import ittalents.javaee1.util.exceptions.InvalidInputException;
+import ittalents.javaee1.util.exceptions.InvalidJsonBodyException;
+import ittalents.javaee1.util.exceptions.NotLoggedException;
 import ittalents.javaee1.models.pojo.User;
 import ittalents.javaee1.models.dto.*;
 import ittalents.javaee1.util.CryptWithBCrypt;
@@ -11,8 +12,8 @@ import ittalents.javaee1.util.ResponseMessage;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-import javax.mail.MessagingException;
 import javax.servlet.http.HttpSession;
+import javax.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,7 +24,7 @@ public class UserController extends GlobalController {
 	private static final String SUCCESSFUL_LOG_OUT = "Successfully logged out!";
 	private static final String SUBSCRIBED = "Subscribed!";
 	private static final String UNSUBSCRIBED = "Unsubscribed!";
-	private static final String ACCOUNT_DELETED = "Unsubscribed!";
+	private static final String ACCOUNT_DELETED = "Account deleted!";
 	private static final String WRONG_CREDENTIALS = "Invalid Username or Password";
 	private static final String EXISTING_EMAIL = "Email already exists!";
 	private static final String EXISTING_USERNAME = "Username already exists!";
@@ -55,7 +56,8 @@ public class UserController extends GlobalController {
 	@GetMapping(value = "/profile")
 	public Object viewMyProfile(HttpSession session) throws NotLoggedException {
 		if (SessionManager.isLogged(session)) {
-			return convertToViewProfileUserDTO(userRepository.findById(SessionManager.getLoggedUserId(session)).get());
+			return userRepository.findById(SessionManager.getLoggedUserId(session)).get()
+					.convertToViewProfileUserDTO(userRepository);
 		} else {
 			throw new NotLoggedException();
 		}
@@ -64,7 +66,7 @@ public class UserController extends GlobalController {
 	@GetMapping(value = "/view/profile/{id}")
 	public Object viewProfile(@PathVariable("id") long id) throws InvalidInputException {
 		if (userRepository.existsById(id)) {
-			return convertToSearchableUserDTO(userRepository.findById(id).get());
+			return userRepository.findById(id).get().convertToSearchableDTO();
 		} else {
 			throw new InvalidInputException(INVALID_USER);
 		}
@@ -75,7 +77,7 @@ public class UserController extends GlobalController {
 		if (userRepository.existsById(id)) {
 			List<SearchableVideoDTO> videos = userRepository.findById(id).get()
 					.getVideos().stream()
-					.map(video -> convertToSearchableVideoDTO(video))
+					.map(video -> video.convertToSearchableVideoDTO(userRepository))
 					.collect(Collectors.toList());
 			if (videos.isEmpty()) {
 				return new ResponseMessage(NO_VIDEOS, HttpStatus.OK.value(), LocalDateTime.now());
@@ -91,7 +93,7 @@ public class UserController extends GlobalController {
 		if (userRepository.existsById(id)) {
 			List<SearchablePlaylistDTO> playlists = userRepository.findById(id).get()
 					.getPlaylists().stream()
-					.map(playlist -> convertToSearchablePlaylistDTO(playlist))
+					.map(playlist -> playlist.convertToSearchablePlaylistDTO(userRepository))
 					.collect(Collectors.toList());
 			if (playlists.isEmpty()) {
 				return new ResponseMessage(NO_PLAYLISTS, HttpStatus.OK.value(), LocalDateTime.now());
@@ -109,7 +111,7 @@ public class UserController extends GlobalController {
 		}
 		if (SessionManager.isLogged(session)) {
 			User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
-			if (!CryptWithBCrypt.checkPassword(password,user.getPassword())) {
+			if (!CryptWithBCrypt.checkPassword(password, user.getPassword())) {
 				throw new InvalidInputException(INCORRECT_PASSWORD);
 			}
 			logout(session);
@@ -128,7 +130,7 @@ public class UserController extends GlobalController {
 			if (!validatePassword(dto.getNewPassword()) || !validatePassword(dto.getOldPassword())) {
 				throw new InvalidInputException(INCORRECT_PASSWORD);
 			}
-			if (!CryptWithBCrypt.checkPassword(dto.getOldPassword(),user.getPassword())) {
+			if (!CryptWithBCrypt.checkPassword(dto.getOldPassword(), user.getPassword())) {
 				throw new InvalidInputException(INCORRECT_PASSWORD);
 			}
 			if (dto.getOldPassword().equals(dto.getNewPassword())) {
@@ -145,6 +147,7 @@ public class UserController extends GlobalController {
 		}
 	}
 	
+	@Transactional
 	@PutMapping(value = "/unsubscribe/{id}")
 	public Object unSubscribeFrom(HttpSession session, @PathVariable("id") long id) throws BadRequestException {
 		
@@ -168,8 +171,9 @@ public class UserController extends GlobalController {
 		throw new NotLoggedException();
 	}
 	
+	@Transactional
 	@PutMapping(value = "/subscribe/{id}")
-	public Object subscribeTo(HttpSession session, @PathVariable("id") long id) throws BadRequestException, MessagingException {
+	public Object subscribeTo(HttpSession session, @PathVariable("id") long id) throws BadRequestException {
 		
 		if (SessionManager.isLogged(session)) {
 			if (userRepository.existsById(id)) {  // user we are subscribing to exists
@@ -203,13 +207,8 @@ public class UserController extends GlobalController {
 		if (userRepository.existsByUsername(userLoginDTO.getUsername())) {
 			
 			User dbUser = userRepository.getByUsername(userLoginDTO.getUsername());
-			if (CryptWithBCrypt.checkPassword(userLoginDTO.getPassword(),dbUser.getPassword())) {
-				UserSessionDTO userSessionDTO = new UserSessionDTO(
-						dbUser.getUserId(),
-						dbUser.getAge(),
-						dbUser.getUsername(),
-						dbUser.getFullName(),
-						dbUser.getEmail());
+			if (CryptWithBCrypt.checkPassword(userLoginDTO.getPassword(), dbUser.getPassword())) {
+				UserSessionDTO userSessionDTO = dbUser.convertToUserSessionDTO();
 				SessionManager.logUser(session, userSessionDTO); // log into session then return as response
 				return userSessionDTO;
 			} else {

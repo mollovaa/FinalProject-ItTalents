@@ -1,9 +1,11 @@
 package ittalents.javaee1.models.dto;
 
+import ittalents.javaee1.repository.UserRepository;
+
 public interface VideoDTOs {
 
-    ViewVideoDTO convertToViewVideoDTO();
+    ViewVideoDTO convertToViewVideoDTO(UserRepository userRepository);
 
-    SearchableVideoDTO convertToSearchableVideoDTO();
+    SearchableVideoDTO convertToSearchableVideoDTO(UserRepository userRepository);
 
 }

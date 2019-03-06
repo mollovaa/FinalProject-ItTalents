@@ -1,8 +1,9 @@
 package ittalents.javaee1.controllers;
 
 
-import ittalents.javaee1.exceptions.BadRequestException;
-import ittalents.javaee1.exceptions.NotLoggedException;
+import ittalents.javaee1.util.SessionManager;
+import ittalents.javaee1.util.exceptions.BadRequestException;
+import ittalents.javaee1.util.exceptions.NotLoggedException;
 import ittalents.javaee1.models.pojo.Notification;
 import ittalents.javaee1.models.pojo.User;
 import ittalents.javaee1.util.ResponseMessage;

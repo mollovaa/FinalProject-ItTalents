@@ -56,23 +56,21 @@ public class Playlist implements Searchable, PlaylistDTOs {
         return SearchType.PLAYLIST;
     }
 
-    @Autowired
-    private UserRepository userRepository;
 
     @Override
-    public SearchablePlaylistDTO convertToSearchablePlaylistDTO() {
+    public SearchablePlaylistDTO convertToSearchablePlaylistDTO(UserRepository userRepository) {
         return new SearchablePlaylistDTO(this.playlistId, this.playlistName,
                 userRepository.findById(this.ownerId).get().getFullName(),
                 this.videosInPlaylist.size());
     }
 
     @Override
-    public ViewPlaylistDTO convertToViewPlaylistDTO() {
+    public ViewPlaylistDTO convertToViewPlaylistDTO(UserRepository userRepository) {
         List<Video> videos = this.videosInPlaylist;
         List<SearchableVideoDTO> videosToShow = new ArrayList<>();
         videosToShow.addAll(videos
                 .stream()
-                .map(Video::convertToSearchableVideoDTO)
+                .map(video -> video.convertToSearchableVideoDTO(userRepository))
                 .collect(Collectors.toList()));
         return new ViewPlaylistDTO(this.playlistId, this.playlistName,
                 userRepository.findById(this.ownerId).get().getFullName(), videosToShow.size(), videosToShow);

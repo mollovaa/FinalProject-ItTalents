@@ -1,6 +1,6 @@
-package ittalents.javaee1.controllers;
+package ittalents.javaee1.util;
 
-import ittalents.javaee1.exceptions.NotLoggedException;
+import ittalents.javaee1.util.exceptions.NotLoggedException;
 import ittalents.javaee1.models.dto.UserSessionDTO;
 
 import javax.servlet.http.HttpSession;

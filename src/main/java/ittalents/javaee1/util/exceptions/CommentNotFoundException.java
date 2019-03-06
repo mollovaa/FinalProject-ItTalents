@@ -1,4 +1,4 @@
-package ittalents.javaee1.exceptions;
+package ittalents.javaee1.util.exceptions;
 
 public class CommentNotFoundException extends NotFoundException {
     public CommentNotFoundException() {
