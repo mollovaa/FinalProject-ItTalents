@@ -40,7 +40,7 @@ public class SearchController extends GlobalController {
 	
 	private SearchQuery addToSearchQueries(String search_query) {
 		if (searchQueryRepository.existsBySearchQuery(search_query)) {
-			return searchQueryRepository.getBySearchQuery(search_query);
+			return searchQueryRepository.getBySearchQuery(search_query); //added to search history
 		}
 		SearchQuery searchQuery = new SearchQuery(search_query);
 		return searchQueryRepository.save(searchQuery);
@@ -56,39 +56,6 @@ public class SearchController extends GlobalController {
 		}
 	}
 	
-	private List<SearchableVideoDTO> getOnlyPublicVideosWithoutFilter(String search_query, HttpSession session) {
-		try {
-			long currentUserId = SessionManager.getLoggedUserId(session);
-			return getSearchedVideos(search_query)
-					.stream()
-					.filter(video -> video.getUploaderId() == currentUserId     //all that are user`s have to be shown
-							|| !video.isIsprivate())                               //OR all that are not private
-					.collect(Collectors.toList());
-		} catch (NotLoggedException e) {
-			return getSearchedVideos(search_query)
-					.stream()
-					.filter(video -> !video.isIsprivate())                          //all that are not private
-					.collect(Collectors.toList());
-		}
-	}
-	
-	private List<SearchableVideoDTO> getOnlyPublicVideosWithFilter(String search_query, HttpSession session,
-																   Filter myFilter) throws InvalidInputException {
-		try {
-			long currentUserId = SessionManager.getLoggedUserId(session);
-			return getFilteredVideos(search_query, myFilter)
-					.stream()
-					.filter(video -> video.getUploaderId() == currentUserId     //all that are user`s have to be shown
-							|| !video.isIsprivate())                               //OR all that are not private
-					.collect(Collectors.toList());
-		} catch (NotLoggedException e) {
-			return getFilteredVideos(search_query, myFilter)
-					.stream()
-					.filter(video -> !video.isIsprivate())                          //all that are not private
-					.collect(Collectors.toList());
-		}
-	}
-	
 	@GetMapping(value = "/search")
 	public Object search(@RequestParam("q") String search_query, HttpSession session) throws BadRequestException {
 		if (isValidString(search_query)) {
@@ -100,7 +67,7 @@ public class SearchController extends GlobalController {
 			List<Searchable> result = new ArrayList<>();
 			result.addAll(getSearchedUsers(search_query));
 			
-			result.addAll(getOnlyPublicVideosWithoutFilter(search_query, session));
+			result.addAll(getSearchedVideos(search_query));
 			
 			result.addAll(getSearchedPlaylists(search_query));
 			if (result.isEmpty()) {
@@ -134,7 +101,7 @@ public class SearchController extends GlobalController {
 					result.addAll(getSearchedPlaylists(search_query));
 				} else {
 					//Video Filters
-					result.addAll(getOnlyPublicVideosWithFilter(search_query, session, myFilter));
+					result.addAll(getFilteredVideos(search_query, myFilter));
 				}
 				if (result.isEmpty()) {
 					return new ResponseMessage(EMPTY_SEARCH, HttpStatus.OK.value(), LocalDateTime.now());
@@ -166,6 +133,7 @@ public class SearchController extends GlobalController {
 	private List<SearchableVideoDTO> getSearchedVideos(String search_query) {
 		return videoRepository.findAllByTitleContaining(search_query)
 				.stream()
+				.filter(video -> !video.isPrivate())
 				.map(video -> video.convertToSearchableVideoDTO(userRepository))
 				.collect(Collectors.toList());
 	}
@@ -176,6 +144,7 @@ public class SearchController extends GlobalController {
 				return videoRepository
 						.findAllByTitleContaining(search_query)
 						.stream()
+						.filter(video -> !video.isPrivate())
 						.sorted(Comparator.comparing(Video::getUploadDate).reversed())
 						.map(video -> video.convertToSearchableVideoDTO(userRepository))
 						.collect(Collectors.toList());
@@ -183,6 +152,7 @@ public class SearchController extends GlobalController {
 				return videoRepository
 						.findAllByTitleContaining(search_query)
 						.stream()
+						.filter(video -> !video.isPrivate())
 						.sorted(Comparator.comparing(Video::getNumberOfViews).reversed())
 						.map(video -> video.convertToSearchableVideoDTO(userRepository))
 						.collect(Collectors.toList());
@@ -190,6 +160,7 @@ public class SearchController extends GlobalController {
 				return videoRepository
 						.findAllByTitleContaining(search_query)
 						.stream()
+						.filter(video -> !video.isPrivate())
 						.sorted(Comparator.comparing(Video::getNumberOfLikes).reversed())
 						.map(video -> video.convertToSearchableVideoDTO(userRepository))
 						.collect(Collectors.toList());
@@ -197,12 +168,14 @@ public class SearchController extends GlobalController {
 				return videoRepository
 						.findAllByTitleContainingAndDurationGreaterThan(search_query, TWENTY_MINUTES_DURATION)
 						.stream()
+						.filter(video -> !video.isPrivate())
 						.map(video -> video.convertToSearchableVideoDTO(userRepository))
 						.collect(Collectors.toList());
 			case LENGTH_SHORT:
 				return videoRepository
 						.findAllByTitleContainingAndDurationLessThanEqual(search_query, FOUR_MINUTES_DURATION)
 						.stream()
+						.filter(video -> !video.isPrivate())
 						.map(video -> video.convertToSearchableVideoDTO(userRepository))
 						.collect(Collectors.toList());
 			case VIDEOS:

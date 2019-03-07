@@ -15,6 +15,8 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 
 import java.io.IOException;
@@ -41,7 +43,6 @@ public abstract class GlobalController {
 	WatchHistoryRepository watchHistoryRepository;
 	@Autowired
 	SearchHistoryRepository searchHistoryRepository;
-	
 	
 	protected static Logger logger = LogManager.getLogger(GlobalController.class);
 	
@@ -70,17 +71,19 @@ public abstract class GlobalController {
 	}
 	
 	@ExceptionHandler({IOException.class})
-	@ResponseStatus(HttpStatus.BAD_REQUEST)
+	@ResponseStatus(HttpStatus.FORBIDDEN)
 	@ResponseBody
 	public ResponseMessage handleNotFoundFiles(Exception e) {
 		logger.error(e.getMessage(), e);
-		return new ResponseMessage(e.getMessage(), HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+		return new ResponseMessage(e.getMessage(), HttpStatus.FORBIDDEN.value(), LocalDateTime.now());
 	}
 	
 	@ExceptionHandler({BadRequestException.class,
 			MissingServletRequestParameterException.class,
 			HttpMessageNotReadableException.class,
-			MethodArgumentTypeMismatchException.class})
+			MethodArgumentTypeMismatchException.class,
+			MissingServletRequestPartException.class,
+			MultipartException.class})
 	@ResponseStatus(HttpStatus.BAD_REQUEST)
 	@ResponseBody
 	public ResponseMessage handleOwnException(Exception e) {

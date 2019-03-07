@@ -2,10 +2,7 @@ package ittalents.javaee1.controllers;
 
 import ittalents.javaee1.util.SessionManager;
 import ittalents.javaee1.util.AmazonClient;
-import ittalents.javaee1.util.exceptions.BadRequestException;
-import ittalents.javaee1.util.exceptions.InvalidInputException;
-import ittalents.javaee1.util.exceptions.InvalidJsonBodyException;
-import ittalents.javaee1.util.exceptions.NotLoggedException;
+import ittalents.javaee1.util.exceptions.*;
 import ittalents.javaee1.models.pojo.User;
 import ittalents.javaee1.models.dto.*;
 import ittalents.javaee1.util.CryptWithBCrypt;
@@ -69,19 +66,20 @@ public class UserController extends GlobalController {
 	}
 	
 	@GetMapping(value = "/view/profile/{id}")
-	public Object viewProfile(@PathVariable("id") long id) throws InvalidInputException {
+	public Object viewProfile(@PathVariable("id") long id) throws UserNotFoundExeption {
 		if (userRepository.existsById(id)) {
 			return userRepository.findById(id).get().convertToSearchableDTO();
 		} else {
-			throw new InvalidInputException(INVALID_USER);
+			throw new UserNotFoundExeption();
 		}
 	}
 	
 	@GetMapping(value = "/view/profile/{id}/videos")
-	public Object viewVideos(@PathVariable("id") long id) throws InvalidInputException {
+	public Object viewVideos(@PathVariable("id") long id) throws UserNotFoundExeption {
 		if (userRepository.existsById(id)) {
 			List<SearchableVideoDTO> videos = userRepository.findById(id).get()
-					.getVideos().stream()
+					.getVideos()
+					.stream()
 					.map(video -> video.convertToSearchableVideoDTO(userRepository))
 					.collect(Collectors.toList());
 			if (videos.isEmpty()) {
@@ -89,15 +87,16 @@ public class UserController extends GlobalController {
 			}
 			return videos;
 		} else {
-			throw new InvalidInputException(INVALID_USER);
+			throw new UserNotFoundExeption();
 		}
 	}
 	
 	@GetMapping(value = "/view/profile/{id}/playlists")
-	public Object viewPlaylists(@PathVariable("id") long id) throws InvalidInputException {
+	public Object viewPlaylists(@PathVariable("id") long id) throws UserNotFoundExeption {
 		if (userRepository.existsById(id)) {
 			List<SearchablePlaylistDTO> playlists = userRepository.findById(id).get()
-					.getPlaylists().stream()
+					.getPlaylists()
+					.stream()
 					.map(playlist -> playlist.convertToSearchablePlaylistDTO(userRepository))
 					.collect(Collectors.toList());
 			if (playlists.isEmpty()) {
@@ -105,12 +104,13 @@ public class UserController extends GlobalController {
 			}
 			return playlists;
 		} else {
-			throw new InvalidInputException(INVALID_USER);
+			throw new UserNotFoundExeption();
 		}
 	}
 	
 	@DeleteMapping(value = "/profile/delete-account")
-	public Object deleteProfile(@RequestParam String password, HttpSession session) throws BadRequestException {
+	public Object deleteProfile(@RequestPart(value = "password") String password, HttpSession session)
+			throws BadRequestException {
 		if (password == null) {
 			throw new InvalidInputException(INCORRECT_PASSWORD);
 		}
@@ -142,9 +142,6 @@ public class UserController extends GlobalController {
 			if (dto.getOldPassword().equals(dto.getNewPassword())) {
 				throw new InvalidInputException(MUST_BE_DIFFERENT_FROM_THE_OLD);
 			}
-			if (!validatePassword(dto.getNewPassword())) {
-				throw new InvalidInputException(INVALID_NEW_PASSWORD);
-			}
 			user.setPassword(CryptWithBCrypt.hashPassword(dto.getNewPassword()));
 			userRepository.save(user);
 			return new ResponseMessage(MSG_PASSWORD_CHANGED, HttpStatus.OK.value(), LocalDateTime.now());
@@ -171,7 +168,7 @@ public class UserController extends GlobalController {
 					throw new InvalidInputException(NOT_SUBSCRIBED);
 				}
 			} else {
-				throw new InvalidInputException(INVALID_USER);
+				throw new UserNotFoundExeption();
 			}
 		}
 		throw new NotLoggedException();
@@ -195,7 +192,7 @@ public class UserController extends GlobalController {
 					return new ResponseMessage(SUBSCRIBED, HttpStatus.OK.value(), LocalDateTime.now());
 				}
 			} else {
-				throw new InvalidInputException(INVALID_USER);
+				throw new UserNotFoundExeption();
 			}
 		}
 		throw new NotLoggedException();
@@ -211,7 +208,6 @@ public class UserController extends GlobalController {
 		}
 		validateLogin(userLoginDTO);
 		if (userRepository.existsByUsername(userLoginDTO.getUsername())) {
-			
 			User dbUser = userRepository.getByUsername(userLoginDTO.getUsername());
 			if (CryptWithBCrypt.checkPassword(userLoginDTO.getPassword(), dbUser.getPassword())) {
 				UserSessionDTO userSessionDTO = dbUser.convertToUserSessionDTO();
