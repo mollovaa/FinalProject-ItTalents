@@ -8,6 +8,7 @@ import ittalents.javaee1.models.pojo.Notification;
 import ittalents.javaee1.models.pojo.User;
 import ittalents.javaee1.util.ResponseMessage;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
@@ -64,7 +65,8 @@ public class NotificationController extends GlobalController {
         return notifications;
     }
 
-    @PutMapping(value = "/all/clear")
+    @Transactional
+    @DeleteMapping(value = "/all/clear")
     public Object clearAllNotifications(HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();

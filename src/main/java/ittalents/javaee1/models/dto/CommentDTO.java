@@ -4,5 +4,5 @@ import ittalents.javaee1.models.repository.UserRepository;
 
 public interface CommentDTO {
 
-    ViewCommentDTO convertToCommentDTO(UserRepository userRepository);
+    ViewCommentDTO convertToViewCommentDTO(UserRepository userRepository);
 }

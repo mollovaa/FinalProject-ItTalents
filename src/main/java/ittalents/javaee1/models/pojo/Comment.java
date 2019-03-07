@@ -55,7 +55,7 @@ public class Comment implements CommentDTO {
     private List<Comment> responses = new ArrayList<>();
     
     @Override
-    public ViewCommentDTO convertToCommentDTO(UserRepository userRepository) {
+    public ViewCommentDTO convertToViewCommentDTO(UserRepository userRepository) {
         return new ViewCommentDTO(this.commentId, this.message, this.dateOfPublication,
                 this.numberOfLikes, this.numberOfDislikes,
                 userRepository.findById(this.publisherId).get().getFullName(), this.responses.size());

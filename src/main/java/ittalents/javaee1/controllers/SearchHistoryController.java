@@ -10,6 +10,7 @@ import ittalents.javaee1.util.ResponseMessage;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
@@ -73,14 +74,15 @@ public class SearchHistoryController extends GlobalController {
         return new ResponseMessage(REMOVED_SEARCH, HttpStatus.OK.value(), LocalDateTime.now());
     }
 
-    @PutMapping(value = "/clear")
+    @Transactional
+    @DeleteMapping(value = "/clear")
     public Object clearSearchHistory(HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
         User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
         List<SearchHistory> searchHistories = searchHistoryRepository.getAllByUser(user);
-        if (searchHistoryRepository.getAllByUser(user).isEmpty()) {
+        if (searchHistories.isEmpty()) {
             return new ResponseMessage(EMPTY_HISTORY, HttpStatus.OK.value(), LocalDateTime.now());
         }
         for (SearchHistory s : searchHistories) {
@@ -88,7 +90,5 @@ public class SearchHistoryController extends GlobalController {
         }
         return new ResponseMessage(SUCCESSFULLY_CLEARED_HISTORY, HttpStatus.OK.value(), LocalDateTime.now());
     }
-
-    //pause
 
 }

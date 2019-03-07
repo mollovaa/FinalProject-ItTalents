@@ -30,14 +30,14 @@ public class WatchHistoryController extends GlobalController {
 	
 	@AllArgsConstructor
 	@Getter
-	private class WatchHistoryToShow {
+	private class viewWatchHistoryDTO {
 		private long id;
 		private SearchableVideoDTO video;
 		private LocalDate date;
 	}
 	
-	private WatchHistoryToShow convertToWatchHistoryToShow(WatchHistory w) {
-		return new WatchHistoryToShow(w.getId(), w.getVideo().convertToSearchableVideoDTO(userRepository), w.getDate());
+	private viewWatchHistoryDTO convertToWatchHistoryToShow(WatchHistory w) {
+		return new viewWatchHistoryDTO(w.getId(), w.getVideo().convertToSearchableVideoDTO(userRepository), w.getDate());
 	}
 	
 	@GetMapping(value = "/all")
@@ -46,7 +46,7 @@ public class WatchHistoryController extends GlobalController {
 			throw new NotLoggedException();
 		}
 		User user = userRepository.getByUserId(SessionManager.getLoggedUserId(session));
-		ArrayList<WatchHistoryToShow> watchHistories =
+		ArrayList<viewWatchHistoryDTO> watchHistories =
 				new ArrayList<>(watchHistoryRepository.getAllByUser(user)
 						.stream()
 						.map(this::convertToWatchHistoryToShow)
@@ -83,7 +83,7 @@ public class WatchHistoryController extends GlobalController {
 			throw new BadRequestException(NOT_VALID_SORT_DIRECTION);
 		}
 		User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
-		List<WatchHistoryToShow> watchHistories = new ArrayList<>();
+		List<viewWatchHistoryDTO> watchHistories = new ArrayList<>();
 		switch (direction.toUpperCase()) {
 			case ASC:
 				watchHistories.addAll(watchHistoryRepository.getAllByUserOrderByDateAsc(user)
