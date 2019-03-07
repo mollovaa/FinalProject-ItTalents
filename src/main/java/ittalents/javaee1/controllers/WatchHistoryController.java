@@ -57,7 +57,7 @@ public class WatchHistoryController extends GlobalController {
 		return watchHistories;
 	}
 	
-	@PutMapping(value = "/clear")
+	@DeleteMapping(value = "/clear")
 	public Object clearWatchHistory(HttpSession session) throws BadRequestException {
 		if (!SessionManager.isLogged(session)) {
 			throw new NotLoggedException();

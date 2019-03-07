@@ -68,7 +68,7 @@ public class UserController extends GlobalController {
 	@GetMapping(value = "/view/profile/{id}")
 	public Object viewProfile(@PathVariable("id") long id) throws UserNotFoundExeption {
 		if (userRepository.existsById(id)) {
-			return userRepository.findById(id).get().convertToSearchableDTO();
+			return userRepository.findById(id).get().convertToSearchableUserDTO();
 		} else {
 			throw new UserNotFoundExeption();
 		}
@@ -80,6 +80,7 @@ public class UserController extends GlobalController {
 			List<SearchableVideoDTO> videos = userRepository.findById(id).get()
 					.getVideos()
 					.stream()
+					.filter(video -> !video.isPrivate())
 					.map(video -> video.convertToSearchableVideoDTO(userRepository))
 					.collect(Collectors.toList());
 			if (videos.isEmpty()) {
@@ -177,12 +178,11 @@ public class UserController extends GlobalController {
 	@Transactional
 	@PutMapping(value = "/subscribe/{id}")
 	public Object subscribeTo(HttpSession session, @PathVariable("id") long id) throws BadRequestException {
-		
 		if (SessionManager.isLogged(session)) {
 			if (userRepository.existsById(id)) {  // user we are subscribing to exists
 				User subscribeTo = userRepository.findById(id).get();//subscriber
 				User loggedUser = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
-				if (loggedUser.getMySubscribers().contains(subscribeTo)) { // already subbed
+				if (loggedUser.getSubscribedToUsers().contains(subscribeTo)) { // already subbed
 					throw new InvalidInputException(ALREADY_SUBSCRIBED);
 				} else { // add subscription
 					loggedUser.getSubscribedToUsers().add(subscribeTo);
@@ -222,9 +222,13 @@ public class UserController extends GlobalController {
 	}
 	
 	@PostMapping(value = "/register")
-	public Object registerUser(@RequestBody UserRegisterDTO userRegisterDTO) throws BadRequestException {
+	public Object registerUser(@RequestBody UserRegisterDTO userRegisterDTO, HttpSession session)
+			throws BadRequestException {
 		if (userRegisterDTO == null) {
 			throw new InvalidJsonBodyException(INVALID_JSON_BODY);
+		}
+		if(SessionManager.isLogged(session)){
+			throw new AccessDeniedException();
 		}
 		validateRegister(userRegisterDTO);
 		if (!userRepository.existsByUsername(userRegisterDTO.getUsername())) {

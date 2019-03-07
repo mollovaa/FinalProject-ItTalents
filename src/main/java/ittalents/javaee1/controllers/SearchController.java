@@ -3,7 +3,6 @@ package ittalents.javaee1.controllers;
 import ittalents.javaee1.util.SessionManager;
 import ittalents.javaee1.util.exceptions.BadRequestException;
 import ittalents.javaee1.util.exceptions.InvalidInputException;
-import ittalents.javaee1.util.exceptions.NotLoggedException;
 import ittalents.javaee1.models.pojo.*;
 import ittalents.javaee1.models.repository.SearchQueryRepository;
 import ittalents.javaee1.models.dto.SearchablePlaylistDTO;
@@ -119,7 +118,7 @@ public class SearchController extends GlobalController {
 	private List<SearchableUserDTO> getSearchedUsers(String search_query) {
 		return userRepository.findAllByFullNameContaining(search_query)
 				.stream()
-				.map(user -> user.convertToSearchableDTO())
+				.map(user -> user.convertToSearchableUserDTO())
 				.collect(Collectors.toList());
 	}
 	

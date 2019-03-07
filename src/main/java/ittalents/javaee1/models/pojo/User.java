@@ -137,7 +137,7 @@ public class User implements Searchable, UserDTOs {
 	}
 	
 	@Override
-	public SearchableUserDTO convertToSearchableDTO() {
+	public SearchableUserDTO convertToSearchableUserDTO() {
 		return new SearchableUserDTO(this.getUserId(), this.getMySubscribers().size(), this.getFullName(),
 				this.getVideos().size(), this.getPlaylists().size());
 	}

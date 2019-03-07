@@ -6,7 +6,7 @@ public interface UserDTOs {
 	
 	UserSessionDTO convertToUserSessionDTO();
 	
-	SearchableUserDTO convertToSearchableDTO();
+	SearchableUserDTO convertToSearchableUserDTO();
 	
 	ViewProfileUserDTO convertToViewProfileUserDTO(UserRepository userRepository);
 }
