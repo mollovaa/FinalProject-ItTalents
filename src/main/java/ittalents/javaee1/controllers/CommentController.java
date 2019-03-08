@@ -26,7 +26,6 @@ public class CommentController extends GlobalController {
 
     private static final String COMMENTED_VIDEO_BY = "Your video has been commented by ";
     private static final String RESPOND_TO_COMMENT = " respond to your comment";
-    private static final String NO_RESPONSES = "No responses!";
     private static final String SUCCESSFULLY_REMOVED_COMMENT = "Successfully removed comment!";
     private static final String ALREADY_DISLIKED_COMMENT = "Already disliked this comment!";
     private static final String INVALID_COMMENT_MESSAGE = "Invalid comment message!";
@@ -48,24 +47,18 @@ public class CommentController extends GlobalController {
 
     @GetMapping(value = "/{commentId}/responses/all")
     public Object showAllResponsesOnComment(@PathVariable long commentId) throws BadRequestException {
-        if (!commentRepository.existsById(commentId)) {
-            throw new CommentNotFoundException();
-        }
-        Comment comment = commentRepository.findById(commentId).get();
-        List<Comment> responses = comment.getResponses();
-        if (responses.isEmpty()) {
-            return new ResponseMessage(NO_RESPONSES, HttpStatus.OK.value(), LocalDateTime.now());
-        }
-        return responses
+        Comment baseComment = commentRepository.getByCommentId(commentId);
+        return baseComment
+                .getResponses()
                 .stream()
-                .map(c -> c.convertToViewCommentDTO(userRepository))
+                .map(c -> c.convertToViewCommentDTO(userRepository.getByUserId(c.getPublisherId()).getFullName()))
                 .collect(Collectors.toList());
     }
 
-    private void notifyVideosOwnerForComment(long videoId, HttpSession session) throws NotLoggedException {
-        long uploaderId = videoRepository.findById(videoId).get().getUploaderId();
-        if (uploaderId != SessionManager.getLoggedUserId(session)) { //if owner comments -> no notification is send
-            String writerName = userRepository.findById(SessionManager.getLoggedUserId(session)).get().getFullName();
+    private void notifyVideosOwnerForComment(Video video, User loggedUser) {
+        long uploaderId = video.getUploaderId();
+        if (uploaderId != loggedUser.getUserId()) { //if owner comments -> no notification is send
+            String writerName = loggedUser.getFullName();
             Notification notif = new Notification(COMMENTED_VIDEO_BY + writerName, uploaderId);
             notificationRepository.save(notif);
         }
@@ -77,10 +70,7 @@ public class CommentController extends GlobalController {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        if (!videoRepository.existsById(videoId)) {
-            throw new VideoNotFoundException();
-        }
-        Video video = videoRepository.getByVideoId(videoId);
+        Video video = videoRepository.getByVideoId(videoId); // throws Video Not Found
         User user = userRepository.getByUserId(SessionManager.getLoggedUserId(session));
         if (video.isPrivate() && video.getUploaderId() != user.getUserId()) {  //private and not logged user`s
             throw new VideoNotFoundException();
@@ -91,39 +81,40 @@ public class CommentController extends GlobalController {
         comment.setVideoId(videoId);
         comment.setResponseToId(null);
         commentRepository.save(comment);
-        this.notifyVideosOwnerForComment(videoId, session);
+        this.notifyVideosOwnerForComment(video, user);
 
-        return comment.convertToViewCommentDTO(userRepository);
+        return comment.convertToViewCommentDTO(user.getFullName());
     }
 
     //notify base comment`s owner
-    private void notifyBaseCommentsOwner(long commentId, HttpSession session) throws NotLoggedException {
-        long commentOwnerId = commentRepository.findById(commentId).get().getPublisherId();
-        if (commentOwnerId != SessionManager.getLoggedUserId(session)) {  //if owner responses to owned comment
-            String writerName = userRepository.findById(SessionManager.getLoggedUserId(session)).get().getFullName();
+    private void notifyBaseCommentsOwner(Comment comment, User loggedUser) {
+        long commentOwnerId = comment.getPublisherId();
+        if (commentOwnerId != loggedUser.getUserId()) {  //if owner responses to owned comment
+            String writerName = loggedUser.getFullName();
             Notification notif = new Notification(writerName + RESPOND_TO_COMMENT, commentOwnerId);
             notificationRepository.save(notif);
         }
     }
 
     @PostMapping(value = "/{commentId}/response")
-    public Object responseComment(@RequestBody Comment comment, @PathVariable long commentId, HttpSession session)
+    public Object responseComment(@RequestBody Comment response, @PathVariable long commentId, HttpSession session)
             throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        if (!commentRepository.existsById(commentId)) {
-            throw new CommentNotFoundException();
-        }
-        this.validateComment(comment);
-        this.setInitialCommentValues(comment);
-        comment.setPublisherId(SessionManager.getLoggedUserId(session));
-        comment.setVideoId(commentRepository.findById(commentId).get().getVideoId());
-        comment.setResponseToId(commentId);
-        commentRepository.save(comment);
-        this.notifyBaseCommentsOwner(commentId, session);
+        User loggedUser = userRepository.getByUserId(SessionManager.getLoggedUserId(session));
 
-        return comment.convertToViewCommentDTO(userRepository);
+        Comment baseComment = commentRepository.getByCommentId(commentId);
+        this.validateComment(response);
+        this.setInitialCommentValues(response);
+        response.setPublisherId(loggedUser.getUserId());
+        response.setVideoId(baseComment.getVideoId());
+        response.setResponseToId(commentId);
+        commentRepository.save(response);
+
+        this.notifyBaseCommentsOwner(baseComment, loggedUser);
+        String publisherName = loggedUser.getFullName();
+        return response.convertToViewCommentDTO(publisherName);
     }
 
 
@@ -166,11 +157,8 @@ public class CommentController extends GlobalController {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        if (!commentRepository.existsById(commentId)) {
-            throw new CommentNotFoundException();
-        }
-        Comment comment = commentRepository.findById(commentId).get();
-        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        Comment comment = commentRepository.getByCommentId(commentId);
+        User user = userRepository.getByUserId(SessionManager.getLoggedUserId(session));
         if (user.getLikedComments().contains(comment)) {
             throw new BadRequestException(ALREADY_LIKED_COMMENT);
         }
@@ -178,7 +166,8 @@ public class CommentController extends GlobalController {
             this.removeDislike(user, comment);
         }
         this.addLike(user, comment);
-        return comment.convertToViewCommentDTO(userRepository);
+        String publisherName = userRepository.getByUserId(comment.getPublisherId()).getFullName();
+        return comment.convertToViewCommentDTO(publisherName);
     }
 
     @Transactional
@@ -187,16 +176,14 @@ public class CommentController extends GlobalController {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        if (!commentRepository.existsById(commentId)) {
-            throw new CommentNotFoundException();
-        }
-        Comment comment = commentRepository.findById(commentId).get();
+        Comment comment = commentRepository.getByCommentId(commentId);
         User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
         if (!user.getLikedComments().contains(comment)) {
             throw new BadRequestException(COMMENT_NOT_LIKED);
         }
         this.removeLike(user, comment);
-        return comment.convertToViewCommentDTO(userRepository);
+        String publisherName = userRepository.getByUserId(comment.getPublisherId()).getFullName();
+        return comment.convertToViewCommentDTO(publisherName);
     }
 
     @Transactional
@@ -205,16 +192,14 @@ public class CommentController extends GlobalController {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        if (!commentRepository.existsById(commentId)) {
-            throw new CommentNotFoundException();
-        }
-        Comment comment = commentRepository.findById(commentId).get();
+        Comment comment = commentRepository.getByCommentId(commentId);
         User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
         if (!user.getDislikedComments().contains(comment)) {
             throw new BadRequestException(COMMENT_NOT_DISLIKED);
         }
         this.removeDislike(user, comment);
-        return comment.convertToViewCommentDTO(userRepository);
+        String publisherName = userRepository.getByUserId(comment.getPublisherId()).getFullName();
+        return comment.convertToViewCommentDTO(publisherName);
     }
 
     @Transactional
@@ -223,10 +208,7 @@ public class CommentController extends GlobalController {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        if (!commentRepository.existsById(commentId)) {
-            throw new CommentNotFoundException();
-        }
-        Comment comment = commentRepository.findById(commentId).get();
+        Comment comment = commentRepository.getByCommentId(commentId);
         User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
         if (user.getDislikedComments().contains(comment)) {
             throw new BadRequestException(ALREADY_DISLIKED_COMMENT);
@@ -235,18 +217,19 @@ public class CommentController extends GlobalController {
             this.removeLike(user, comment);
         }
         this.addDislike(user, comment);
-        return comment.convertToViewCommentDTO(userRepository);
+        String publisherName = userRepository.getByUserId(comment.getPublisherId()).getFullName();
+
+        return comment.convertToViewCommentDTO(publisherName);
     }
 
+    @Transactional
     @DeleteMapping(value = "/{commentId}/remove")
     public Object removeComment(@PathVariable long commentId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        if (!commentRepository.existsById(commentId)) {
-            throw new CommentNotFoundException();
-        }
-        Comment comment = commentRepository.findById(commentId).get();
+
+        Comment comment = commentRepository.getByCommentId(commentId);
         User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
         if (user.getUserId() != comment.getPublisherId()) {
             throw new AccessDeniedException();

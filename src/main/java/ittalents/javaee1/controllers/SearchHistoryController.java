@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 @RequestMapping(value = "/searchHistory")
 public class SearchHistoryController extends GlobalController {
 
-    private static final String THE_SEARCH_DOES_NOT_EXIST = "The search does not exist!";
     private static final String REMOVED_SEARCH = "Removed search!";
 
     @Getter
@@ -46,28 +45,21 @@ public class SearchHistoryController extends GlobalController {
             throw new NotLoggedException();
         }
         User user = userRepository.getByUserId(SessionManager.getLoggedUserId(session));
-        ArrayList<SearchHistoryController.viewSearchHistoryDTO> searchHistories =
-                new ArrayList<>(searchHistoryRepository.getAllByUser(user)
-                        .stream()
-                        .map(this::convertToViewSearchHistoryDTO)
-                        .collect(Collectors.toList()));
-
-        if (searchHistories.isEmpty()) {
-            return new ResponseMessage(EMPTY_HISTORY, HttpStatus.OK.value(), LocalDateTime.now());
-        }
-        return searchHistories;
+        return new ArrayList<>(searchHistoryRepository.getAllByUser(user)
+                .stream()
+                .map(this::convertToViewSearchHistoryDTO)
+                .collect(Collectors.toList()));
     }
 
+    @Transactional
     @PutMapping(value = "/{searchHistoryId}/remove")
     public Object removeSearchedById(@PathVariable long searchHistoryId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
         User user = userRepository.getByUserId(SessionManager.getLoggedUserId(session));
-        if (!searchHistoryRepository.existsById(searchHistoryId)) {
-            throw new BadRequestException(THE_SEARCH_DOES_NOT_EXIST);
-        }
-        if (searchHistoryRepository.getById(searchHistoryId).getUser() != user) {
+        SearchHistory searchHistory = searchHistoryRepository.getById(searchHistoryId);
+        if (searchHistory.getUser() != user) {
             throw new AccessDeniedException();
         }
         searchHistoryRepository.deleteById(searchHistoryId);
@@ -82,9 +74,6 @@ public class SearchHistoryController extends GlobalController {
         }
         User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
         List<SearchHistory> searchHistories = searchHistoryRepository.getAllByUser(user);
-        if (searchHistories.isEmpty()) {
-            return new ResponseMessage(EMPTY_HISTORY, HttpStatus.OK.value(), LocalDateTime.now());
-        }
         for (SearchHistory s : searchHistories) {
             searchHistoryRepository.delete(s);
         }

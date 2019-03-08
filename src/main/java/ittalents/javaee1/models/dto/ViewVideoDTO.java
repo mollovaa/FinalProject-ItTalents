@@ -18,8 +18,7 @@ public class ViewVideoDTO {
     private String category;
     private String description;
     private String URL;
-    private LocalDate date;
-    private long duration;              //seconds
+    private LocalDate date;              //seconds
     private int likes;
     private int dislikes;
     private long views;

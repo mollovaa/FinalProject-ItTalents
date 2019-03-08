@@ -30,7 +30,6 @@ public class PlaylistController extends GlobalController {
     private static final String VIDEO_ALREADY_ADDED_TO_PLAYLIST = "Video already added to playlist!";
     private static final String SUCCESSFULLY_REMOVED_PLAYLIST = "Successfully removed a playlist!";
     private static final String INVALID_PLAYLIST_NAME = "Invalid playlist name!";
-    private static final String EMPTY_PLAYLIST = "Empty playlist!";
 
     private void validatePlaylist(Playlist playlist) throws InvalidInputException {
         if (!isValidString(playlist.getPlaylistName())) {
@@ -41,9 +40,6 @@ public class PlaylistController extends GlobalController {
     @GetMapping(value = "/{playlistId}/show")
     @ResponseBody
     public Object showPlaylist(@PathVariable long playlistId) throws PlaylistNotFoundException {
-        if (!playlistRepository.existsById(playlistId)) {
-            throw new PlaylistNotFoundException();
-        }
         return playlistRepository.getByPlaylistId(playlistId).convertToSearchablePlaylistDTO(userRepository);
     }
 
@@ -60,28 +56,21 @@ public class PlaylistController extends GlobalController {
 
     @GetMapping(value = "/{playlistId}/videos/all")
     public Object showVideos(@PathVariable long playlistId) throws PlaylistNotFoundException {
-        if (!playlistRepository.existsById(playlistId)) {
-            throw new PlaylistNotFoundException();
-        }
-        List<Video> videos = playlistRepository.getByPlaylistId(playlistId).getVideosInPlaylist();
-        if (videos.isEmpty()) {
-            return new ResponseMessage(EMPTY_PLAYLIST, HttpStatus.OK.value(), LocalDateTime.now());
-        }
+        Playlist playlist = playlistRepository.getByPlaylistId(playlistId);
+        List<Video> videos = playlist.getVideosInPlaylist();
         return videos
                 .stream()
                 .map(video -> video.convertToSearchableVideoDTO(userRepository))
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     @DeleteMapping(value = "/{playlistId}/remove")
     public Object removePlaylist(@PathVariable long playlistId, HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        if (!playlistRepository.existsById(playlistId)) {
-            throw new PlaylistNotFoundException();
-        }
-        Playlist playlist = playlistRepository.findById(playlistId).get();
+        Playlist playlist = playlistRepository.getByPlaylistId(playlistId);
         if (SessionManager.getLoggedUserId(session) != playlist.getOwnerId()) {
             throw new AccessDeniedException();
         }
@@ -96,14 +85,12 @@ public class PlaylistController extends GlobalController {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        if (!playlistRepository.existsById(playlistId)) {
-            throw new PlaylistNotFoundException();
-        }                                               //only public videos can be added to playlist:
-        if (!videoRepository.existsById(videoId) || videoRepository.getByVideoId(videoId).isPrivate()) {
-            throw new VideoNotFoundException();
-        }
         Playlist playlist = playlistRepository.getByPlaylistId(playlistId);
         Video video = videoRepository.getByVideoId(videoId);
+        //only public videos can be added to playlist:
+        if (video.isPrivate()) {
+            throw new VideoNotFoundException();
+        }
         if (playlist.getOwnerId() != SessionManager.getLoggedUserId(session)) {
             throw new AccessDeniedException();
         }
@@ -123,14 +110,11 @@ public class PlaylistController extends GlobalController {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        if (!playlistRepository.existsById(playlistId)) {
-            throw new PlaylistNotFoundException();
-        }
-        if (!videoRepository.existsById(videoId) || videoRepository.getByVideoId(videoId).isPrivate()) {
-            throw new VideoNotFoundException();
-        }
         Playlist playlist = playlistRepository.getByPlaylistId(playlistId);
         Video video = videoRepository.getByVideoId(videoId);
+        if (video.isPrivate()) {
+            throw new VideoNotFoundException();
+        }
         if (playlist.getOwnerId() != SessionManager.getLoggedUserId(session)) {
             throw new AccessDeniedException();
         }

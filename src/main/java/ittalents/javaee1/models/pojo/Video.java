@@ -33,58 +33,59 @@ import java.util.Set;
 @Entity
 @Table(name = "videos")
 public class Video implements Searchable, VideoDTOs {
-	
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private long videoId;
-	private String title;
-	private String category;
-	private String description;
-	private String URL;
-	private LocalDate uploadDate;
-	private long duration;        //seconds
-	private boolean isPrivate;
-	private int numberOfLikes;
-	private int numberOfDislikes;
-	private long numberOfViews;
-	private long uploaderId;
-	
-	
-	@JsonIgnore
-	@ManyToMany(mappedBy = "likedVideos")
-	private List<User> usersLikedVideo = new ArrayList<>();
-	
-	@JsonIgnore
-	@ManyToMany(mappedBy = "dislikedVideos")
-	private List<User> usersDislikedVideo = new ArrayList<>();
-	
-	@JsonIgnore
-	@ManyToMany(mappedBy = "videosInPlaylist")
-	private List<Playlist> playlistContainingVideo = new ArrayList<>();
-	
-	@OneToMany(mappedBy = "videoId", orphanRemoval = true)
-	private List<Comment> comments = new ArrayList<>();
-	
-	@JsonIgnore
-	@OneToMany(mappedBy = "video", orphanRemoval = true)
-	Set<WatchHistory> watchHistorySet = new HashSet<>();
-	
-	@Override
-	public SearchType getType() {
-		return SearchType.VIDEO;
-	}
-	
-	@Override
-	public ViewVideoDTO convertToViewVideoDTO(UserRepository userRepository) {
-		return new ViewVideoDTO(this.videoId, this.title, this.category, this.description, this.URL,
-				this.uploadDate, this.duration, this.numberOfLikes, this.numberOfDislikes, this.numberOfViews,
-				userRepository.findById(this.uploaderId).get().getFullName(), this.comments.size());
-	}
-	
-	@Override
-	public SearchableVideoDTO convertToSearchableVideoDTO(UserRepository userRepository) {
-		return new SearchableVideoDTO(this.videoId, this.title,
-				userRepository.findById(this.uploaderId).get().getFullName(),
-				this.uploaderId, this.isPrivate);
-	}
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long videoId;
+    private String title;
+    private String category;
+    private String description;
+    private String URL;
+    private LocalDate uploadDate;
+    private long duration;        //seconds
+    private boolean isPrivate;
+    private int numberOfLikes;
+    private int numberOfDislikes;
+    private long numberOfViews;
+    private long uploaderId;
+
+
+    @JsonIgnore
+    @ManyToMany(mappedBy = "likedVideos")
+    private List<User> usersLikedVideo = new ArrayList<>();
+
+    @JsonIgnore
+    @ManyToMany(mappedBy = "dislikedVideos")
+    private List<User> usersDislikedVideo = new ArrayList<>();
+
+    @JsonIgnore
+    @ManyToMany(mappedBy = "videosInPlaylist")
+    private List<Playlist> playlistContainingVideo = new ArrayList<>();
+
+    @OneToMany(mappedBy = "videoId", orphanRemoval = true)
+    private List<Comment> comments = new ArrayList<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "video", orphanRemoval = true)
+    Set<WatchHistory> watchHistorySet = new HashSet<>();
+
+    @Override
+    public SearchType getType() {
+        return SearchType.VIDEO;
+    }
+
+    @Override
+    public ViewVideoDTO convertToViewVideoDTO(String uploaderName) {
+        return new ViewVideoDTO(this.videoId, this.title, this.category, this.description,
+                (this.URL == null ? "Not uploaded" : this.URL), this.uploadDate, this.numberOfLikes,
+                this.numberOfDislikes, this.numberOfViews,
+                uploaderName, this.comments.size());
+    }
+
+    @Override
+    public SearchableVideoDTO convertToSearchableVideoDTO(UserRepository userRepository) {
+        return new SearchableVideoDTO(this.videoId, this.title,
+                userRepository.findById(this.uploaderId).get().getFullName(),
+                this.uploaderId, this.isPrivate);
+    }
 }

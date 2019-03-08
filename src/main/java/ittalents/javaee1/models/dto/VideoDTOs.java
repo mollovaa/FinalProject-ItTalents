@@ -4,7 +4,7 @@ import ittalents.javaee1.models.repository.UserRepository;
 
 public interface VideoDTOs {
 
-    ViewVideoDTO convertToViewVideoDTO(UserRepository userRepository);
+    ViewVideoDTO convertToViewVideoDTO(String uploaderName);
 
     SearchableVideoDTO convertToSearchableVideoDTO(UserRepository userRepository);
 

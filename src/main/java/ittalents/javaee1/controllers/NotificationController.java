@@ -20,7 +20,6 @@ import java.util.List;
 @RequestMapping(value = "/notifications")
 public class NotificationController extends GlobalController {
 
-    private static final String NO_NOTIFICATIONS = "No notifications";
     private static final String SUCCESSFULLY_CLEARED_NOTIFICATIONS = "Successfully cleared notifications!";
 
     @GetMapping(value = "/unread")     //only unread notifications
@@ -29,9 +28,6 @@ public class NotificationController extends GlobalController {
             throw new NotLoggedException();
         }
         User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
-        if (user.getNotifications() == null || user.getNotifications().isEmpty()) {
-            return new ResponseMessage(NO_NOTIFICATIONS, HttpStatus.OK.value(), LocalDateTime.now());
-        }
         ArrayList<Notification> result = new ArrayList<>();
         for (Notification n : user.getNotifications()) {
             if (!n.isRead()) {
@@ -39,9 +35,6 @@ public class NotificationController extends GlobalController {
                 n.setRead(true);
                 notificationRepository.save(n);
             }
-        }
-        if (result.isEmpty()) {
-            return new ResponseMessage(NO_NOTIFICATIONS, HttpStatus.OK.value(), LocalDateTime.now());
         }
         return result;
     }
@@ -53,9 +46,6 @@ public class NotificationController extends GlobalController {
         }
         User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
         List<Notification> notifications = user.getNotifications();
-        if (notifications == null || notifications.isEmpty()) {
-            return new ResponseMessage(NO_NOTIFICATIONS, HttpStatus.OK.value(), LocalDateTime.now());
-        }
         for (Notification n : notifications) {
             if (!n.isRead()) {
                 n.setRead(true);
@@ -73,9 +63,6 @@ public class NotificationController extends GlobalController {
         }
         User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
         List<Notification> notifications = user.getNotifications();
-        if (notifications == null || notifications.isEmpty()) {
-            return new ResponseMessage(NO_NOTIFICATIONS, HttpStatus.OK.value(), LocalDateTime.now());
-        }
         for (Notification n : notifications) {
             notificationRepository.delete(n);
         }
