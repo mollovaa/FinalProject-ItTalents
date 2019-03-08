@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpSession;
 import javax.transaction.Transactional;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
@@ -33,15 +32,14 @@ public class UserController extends GlobalController {
 	private static final String NOT_SUBSCRIBED = "Not subscribed.";
 	private static final String ALREADY_LOGGED = "Already logged in.";
 	private static final String ALREADY_SUBSCRIBED = "Already subscribed.";
-	private static final String INVALID_USER = "Invalid user!";
 	private static final String INVALID_JSON_BODY = "Invalid Json Body!";
 	private static final String INCORRECT_PASSWORD = "Incorrect password!";
 	private static final String MSG_PASSWORD_CHANGED = "Password changed!";
 	private static final String MUST_BE_DIFFERENT_FROM_THE_OLD = "New password must be different from the old!";
+	private static final String DOES_NOT_MATCH = "Password's does not match!";
 	private static final int MIN_PASS_LENGTH = 5;
-	private static final String INVALID_NEW_PASSWORD = "Invalid new Password";
-	private static final String NO_VIDEOS = "No videos!";
-	private static final String NO_PLAYLISTS = "No playlists";
+	
+	
 	
 	@Autowired
 	private AmazonClient amazonClient;
@@ -67,46 +65,26 @@ public class UserController extends GlobalController {
 	
 	@GetMapping(value = "/view/profile/{id}")
 	public Object viewProfile(@PathVariable("id") long id) throws UserNotFoundExeption {
-		if (userRepository.existsById(id)) {
-			return userRepository.findById(id).get().convertToSearchableUserDTO();
-		} else {
-			throw new UserNotFoundExeption();
-		}
+		return userRepository.getById(id).convertToSearchableUserDTO();
 	}
 	
 	@GetMapping(value = "/view/profile/{id}/videos")
 	public Object viewVideos(@PathVariable("id") long id) throws UserNotFoundExeption {
-		if (userRepository.existsById(id)) {
-			List<SearchableVideoDTO> videos = userRepository.findById(id).get()
-					.getVideos()
-					.stream()
-					.filter(video -> !video.isPrivate())
-					.map(video -> video.convertToSearchableVideoDTO(userRepository))
-					.collect(Collectors.toList());
-			if (videos.isEmpty()) {
-				return new ResponseMessage(NO_VIDEOS, HttpStatus.OK.value(), LocalDateTime.now());
-			}
-			return videos;
-		} else {
-			throw new UserNotFoundExeption();
-		}
+		return userRepository.getById(id)
+				.getVideos()
+				.stream()
+				.filter(video -> !video.isPrivate())
+				.map(video -> video.convertToSearchableVideoDTO(userRepository))
+				.collect(Collectors.toList());
 	}
 	
 	@GetMapping(value = "/view/profile/{id}/playlists")
 	public Object viewPlaylists(@PathVariable("id") long id) throws UserNotFoundExeption {
-		if (userRepository.existsById(id)) {
-			List<SearchablePlaylistDTO> playlists = userRepository.findById(id).get()
-					.getPlaylists()
-					.stream()
-					.map(playlist -> playlist.convertToSearchablePlaylistDTO(userRepository))
-					.collect(Collectors.toList());
-			if (playlists.isEmpty()) {
-				return new ResponseMessage(NO_PLAYLISTS, HttpStatus.OK.value(), LocalDateTime.now());
-			}
-			return playlists;
-		} else {
-			throw new UserNotFoundExeption();
-		}
+		return userRepository.getById(id)
+				.getPlaylists()
+				.stream()
+				.map(playlist -> playlist.convertToSearchablePlaylistDTO(userRepository))
+				.collect(Collectors.toList());
 	}
 	
 	@DeleteMapping(value = "/profile/delete-account")
@@ -143,6 +121,9 @@ public class UserController extends GlobalController {
 			if (dto.getOldPassword().equals(dto.getNewPassword())) {
 				throw new InvalidInputException(MUST_BE_DIFFERENT_FROM_THE_OLD);
 			}
+			if(!dto.getNewPassword().equals(dto.getConfirmPasword())){
+				throw new InvalidInputException(DOES_NOT_MATCH);
+			}
 			user.setPassword(CryptWithBCrypt.hashPassword(dto.getNewPassword()));
 			userRepository.save(user);
 			return new ResponseMessage(MSG_PASSWORD_CHANGED, HttpStatus.OK.value(), LocalDateTime.now());
@@ -154,22 +135,17 @@ public class UserController extends GlobalController {
 	@Transactional
 	@PutMapping(value = "/unsubscribe/{id}")
 	public Object unSubscribeFrom(HttpSession session, @PathVariable("id") long id) throws BadRequestException {
-		
 		if (SessionManager.isLogged(session)) {
-			if (userRepository.existsById(id)) {  // user we are subscribing to exists
-				User unSubscribeFrom = userRepository.findById(id).get();//subscriber
-				User loggedUser = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
-				if (loggedUser.getMySubscribers().contains(unSubscribeFrom)) {
-					loggedUser.getSubscribedToUsers().remove(unSubscribeFrom);
-					unSubscribeFrom.getMySubscribers().remove(loggedUser);
-					userRepository.save(loggedUser);
-					userRepository.save(unSubscribeFrom);
-					return new ResponseMessage(UNSUBSCRIBED, HttpStatus.OK.value(), LocalDateTime.now());
-				} else {  //not subbed
-					throw new InvalidInputException(NOT_SUBSCRIBED);
-				}
-			} else {
-				throw new UserNotFoundExeption();
+			User unSubscribeFrom = userRepository.getById(id);//subscriber
+			User loggedUser = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+			if (loggedUser.getMySubscribers().contains(unSubscribeFrom)) {
+				loggedUser.getSubscribedToUsers().remove(unSubscribeFrom);
+				unSubscribeFrom.getMySubscribers().remove(loggedUser);
+				userRepository.save(loggedUser);
+				userRepository.save(unSubscribeFrom);
+				return new ResponseMessage(UNSUBSCRIBED, HttpStatus.OK.value(), LocalDateTime.now());
+			} else {  //not subbed
+				throw new InvalidInputException(NOT_SUBSCRIBED);
 			}
 		}
 		throw new NotLoggedException();
@@ -179,20 +155,16 @@ public class UserController extends GlobalController {
 	@PutMapping(value = "/subscribe/{id}")
 	public Object subscribeTo(HttpSession session, @PathVariable("id") long id) throws BadRequestException {
 		if (SessionManager.isLogged(session)) {
-			if (userRepository.existsById(id)) {  // user we are subscribing to exists
-				User subscribeTo = userRepository.findById(id).get();//subscriber
-				User loggedUser = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
-				if (loggedUser.getSubscribedToUsers().contains(subscribeTo)) { // already subbed
-					throw new InvalidInputException(ALREADY_SUBSCRIBED);
-				} else { // add subscription
-					loggedUser.getSubscribedToUsers().add(subscribeTo);
-					subscribeTo.getMySubscribers().add(loggedUser);
-					userRepository.save(loggedUser);
-					userRepository.save(subscribeTo);
-					return new ResponseMessage(SUBSCRIBED, HttpStatus.OK.value(), LocalDateTime.now());
-				}
-			} else {
-				throw new UserNotFoundExeption();
+			User subscribeTo = userRepository.getById(id);//subscriber
+			User loggedUser = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+			if (loggedUser.getSubscribedToUsers().contains(subscribeTo)) { // already subbed
+				throw new InvalidInputException(ALREADY_SUBSCRIBED);
+			} else { // add subscription
+				loggedUser.getSubscribedToUsers().add(subscribeTo);
+				subscribeTo.getMySubscribers().add(loggedUser);
+				userRepository.save(loggedUser);
+				userRepository.save(subscribeTo);
+				return new ResponseMessage(SUBSCRIBED, HttpStatus.OK.value(), LocalDateTime.now());
 			}
 		}
 		throw new NotLoggedException();
@@ -227,7 +199,7 @@ public class UserController extends GlobalController {
 		if (userRegisterDTO == null) {
 			throw new InvalidJsonBodyException(INVALID_JSON_BODY);
 		}
-		if(SessionManager.isLogged(session)){
+		if (SessionManager.isLogged(session)) {
 			throw new AccessDeniedException();
 		}
 		validateRegister(userRegisterDTO);
@@ -265,7 +237,10 @@ public class UserController extends GlobalController {
 	
 	private void validateRegister(UserRegisterDTO user) throws InvalidInputException {
 		validateLogin(user);
-		
+		validatePassword(user.getConfirm_password());
+		if(!user.getConfirm_password().equals(user.getPassword())){
+			throw new InvalidInputException(DOES_NOT_MATCH);
+		}
 		String email = user.getEmail();
 		if (email == null || email.isEmpty()) {
 			throw new InvalidInputException(INVALID_EMAIL);

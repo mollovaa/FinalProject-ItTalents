@@ -60,20 +60,15 @@ public class SearchController extends GlobalController {
 		if (isValidString(search_query)) {
 			SearchQuery sQuery = this.addToSearchQueries(search_query);  //add to search queries
 			if (SessionManager.isLogged(session)) { //if logged -> add to search history
-				this.addToSearchHistory(userRepository.getByUserId(
-						SessionManager.getLoggedUserId(session)), sQuery);
+				this.addToSearchHistory(userRepository.getById(SessionManager.getLoggedUserId(session)), sQuery);
 			}
 			List<Searchable> result = new ArrayList<>();
 			result.addAll(getSearchedUsers(search_query));
-			
 			result.addAll(getSearchedVideos(search_query));
-			
 			result.addAll(getSearchedPlaylists(search_query));
-			if (result.isEmpty()) {
-				return new ResponseMessage(EMPTY_SEARCH, HttpStatus.OK.value(), LocalDateTime.now());
-			} else {
-				return result;
-			}
+			
+			return result;
+			
 		}
 		throw new InvalidInputException(EMPTY_SEARCH);
 	}
@@ -89,8 +84,7 @@ public class SearchController extends GlobalController {
 				}
 				SearchQuery sQuery = this.addToSearchQueries(search_query);  //add to search queries
 				if (SessionManager.isLogged(session)) { //if logged -> add to search history
-					this.addToSearchHistory(userRepository.getByUserId(
-							SessionManager.getLoggedUserId(session)), sQuery);
+					this.addToSearchHistory(userRepository.getById(SessionManager.getLoggedUserId(session)), sQuery);
 				}
 				List<Searchable> result = new ArrayList<>();
 				
@@ -101,9 +95,6 @@ public class SearchController extends GlobalController {
 				} else {
 					//Video Filters
 					result.addAll(getFilteredVideos(search_query, myFilter));
-				}
-				if (result.isEmpty()) {
-					return new ResponseMessage(EMPTY_SEARCH, HttpStatus.OK.value(), LocalDateTime.now());
 				}
 				return result;
 			} else {
