@@ -1,6 +1,7 @@
 package ittalents.javaee1.controllers;
 
 
+import ittalents.javaee1.models.dto.ViewCommentDTO;
 import ittalents.javaee1.util.SessionManager;
 import ittalents.javaee1.util.exceptions.*;
 import ittalents.javaee1.models.pojo.Comment;
@@ -17,6 +18,7 @@ import javax.servlet.http.HttpSession;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -48,11 +50,11 @@ public class CommentController extends GlobalController {
     @GetMapping(value = "/{commentId}/responses/all")
     public Object showAllResponsesOnComment(@PathVariable long commentId) throws BadRequestException {
         Comment baseComment = commentRepository.getByCommentId(commentId);
-        return baseComment
-                .getResponses()
-                .stream()
-                .map(c -> c.convertToViewCommentDTO(userRepository.getByUserId(c.getPublisherId()).getFullName()))
-                .collect(Collectors.toList());
+        List<ViewCommentDTO> responses = new ArrayList<>();
+        for (Comment response : baseComment.getResponses()) {
+            responses.add(response.convertToViewCommentDTO(userRepository.getById(response.getPublisherId()).getFullName()));
+        }
+        return responses;
     }
 
     private void notifyVideosOwnerForComment(Video video, User loggedUser) {
@@ -71,13 +73,13 @@ public class CommentController extends GlobalController {
             throw new NotLoggedException();
         }
         Video video = videoRepository.getByVideoId(videoId); // throws Video Not Found
-        User user = userRepository.getByUserId(SessionManager.getLoggedUserId(session));
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         if (video.isPrivate() && video.getUploaderId() != user.getUserId()) {  //private and not logged user`s
             throw new VideoNotFoundException();
         }
         this.validateComment(comment);
         this.setInitialCommentValues(comment);
-        comment.setPublisherId(SessionManager.getLoggedUserId(session));
+        comment.setPublisherId(user.getUserId());
         comment.setVideoId(videoId);
         comment.setResponseToId(null);
         commentRepository.save(comment);
@@ -102,7 +104,7 @@ public class CommentController extends GlobalController {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        User loggedUser = userRepository.getByUserId(SessionManager.getLoggedUserId(session));
+        User loggedUser = userRepository.getById(SessionManager.getLoggedUserId(session));
 
         Comment baseComment = commentRepository.getByCommentId(commentId);
         this.validateComment(response);
@@ -116,7 +118,6 @@ public class CommentController extends GlobalController {
         String publisherName = loggedUser.getFullName();
         return response.convertToViewCommentDTO(publisherName);
     }
-
 
     private void saveUserAndComment(User user, Comment comment) {
         commentRepository.save(comment);
@@ -158,7 +159,7 @@ public class CommentController extends GlobalController {
             throw new NotLoggedException();
         }
         Comment comment = commentRepository.getByCommentId(commentId);
-        User user = userRepository.getByUserId(SessionManager.getLoggedUserId(session));
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         if (user.getLikedComments().contains(comment)) {
             throw new BadRequestException(ALREADY_LIKED_COMMENT);
         }
@@ -166,7 +167,7 @@ public class CommentController extends GlobalController {
             this.removeDislike(user, comment);
         }
         this.addLike(user, comment);
-        String publisherName = userRepository.getByUserId(comment.getPublisherId()).getFullName();
+        String publisherName = userRepository.getById(comment.getPublisherId()).getFullName();
         return comment.convertToViewCommentDTO(publisherName);
     }
 
@@ -177,12 +178,12 @@ public class CommentController extends GlobalController {
             throw new NotLoggedException();
         }
         Comment comment = commentRepository.getByCommentId(commentId);
-        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         if (!user.getLikedComments().contains(comment)) {
             throw new BadRequestException(COMMENT_NOT_LIKED);
         }
         this.removeLike(user, comment);
-        String publisherName = userRepository.getByUserId(comment.getPublisherId()).getFullName();
+        String publisherName = userRepository.getById(comment.getPublisherId()).getFullName();
         return comment.convertToViewCommentDTO(publisherName);
     }
 
@@ -193,12 +194,12 @@ public class CommentController extends GlobalController {
             throw new NotLoggedException();
         }
         Comment comment = commentRepository.getByCommentId(commentId);
-        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         if (!user.getDislikedComments().contains(comment)) {
             throw new BadRequestException(COMMENT_NOT_DISLIKED);
         }
         this.removeDislike(user, comment);
-        String publisherName = userRepository.getByUserId(comment.getPublisherId()).getFullName();
+        String publisherName = userRepository.getById(comment.getPublisherId()).getFullName();
         return comment.convertToViewCommentDTO(publisherName);
     }
 
@@ -209,7 +210,7 @@ public class CommentController extends GlobalController {
             throw new NotLoggedException();
         }
         Comment comment = commentRepository.getByCommentId(commentId);
-        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         if (user.getDislikedComments().contains(comment)) {
             throw new BadRequestException(ALREADY_DISLIKED_COMMENT);
         }
@@ -217,7 +218,7 @@ public class CommentController extends GlobalController {
             this.removeLike(user, comment);
         }
         this.addDislike(user, comment);
-        String publisherName = userRepository.getByUserId(comment.getPublisherId()).getFullName();
+        String publisherName = userRepository.getById(comment.getPublisherId()).getFullName();
 
         return comment.convertToViewCommentDTO(publisherName);
     }
@@ -228,9 +229,8 @@ public class CommentController extends GlobalController {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-
         Comment comment = commentRepository.getByCommentId(commentId);
-        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         if (user.getUserId() != comment.getPublisherId()) {
             throw new AccessDeniedException();
         }

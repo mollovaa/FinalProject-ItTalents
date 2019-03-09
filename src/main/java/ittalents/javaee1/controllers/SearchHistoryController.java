@@ -44,7 +44,7 @@ public class SearchHistoryController extends GlobalController {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        User user = userRepository.getByUserId(SessionManager.getLoggedUserId(session));
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         return new ArrayList<>(searchHistoryRepository.getAllByUser(user)
                 .stream()
                 .map(this::convertToViewSearchHistoryDTO)
@@ -57,7 +57,7 @@ public class SearchHistoryController extends GlobalController {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        User user = userRepository.getByUserId(SessionManager.getLoggedUserId(session));
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         SearchHistory searchHistory = searchHistoryRepository.getById(searchHistoryId);
         if (searchHistory.getUser() != user) {
             throw new AccessDeniedException();
@@ -72,7 +72,7 @@ public class SearchHistoryController extends GlobalController {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         List<SearchHistory> searchHistories = searchHistoryRepository.getAllByUser(user);
         for (SearchHistory s : searchHistories) {
             searchHistoryRepository.delete(s);

@@ -45,7 +45,7 @@ public class WatchHistoryController extends GlobalController {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        User user = userRepository.getByUserId(SessionManager.getLoggedUserId(session));
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         return new ArrayList<>(watchHistoryRepository.getAllByUser(user)
                 .stream()
                 .map(this::convertToWatchHistoryToShow)
@@ -57,7 +57,7 @@ public class WatchHistoryController extends GlobalController {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         List<WatchHistory> watchHistories = watchHistoryRepository.getAllByUser(user);
         for (WatchHistory w : watchHistories) {
             watchHistoryRepository.delete(w);
@@ -74,7 +74,7 @@ public class WatchHistoryController extends GlobalController {
         if (!direction.equalsIgnoreCase(ASC) && !direction.equalsIgnoreCase(DESC)) {
             throw new BadRequestException(NOT_VALID_SORT_DIRECTION);
         }
-        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         List<viewWatchHistoryDTO> watchHistories = new ArrayList<>();
         switch (direction.toUpperCase()) {
             case ASC:

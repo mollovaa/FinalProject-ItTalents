@@ -1,5 +1,6 @@
 package ittalents.javaee1.controllers;
 
+import ittalents.javaee1.models.dto.ViewCommentDTO;
 import ittalents.javaee1.util.SessionManager;
 import ittalents.javaee1.util.AmazonClient;
 import ittalents.javaee1.util.exceptions.AccessDeniedException;
@@ -26,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpSession;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -76,10 +78,9 @@ public class VideoController extends GlobalController {
         video.setURL(null);
     }
 
-    private void validatePrivateAccessToVideo(HttpSession session, Video video)
-            throws NotLoggedException, VideoNotFoundException {
+    private void validatePrivateAccessToVideo(HttpSession session, Video video) throws BadRequestException {
         if (SessionManager.isLogged(session)) {
-            User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+            User user = userRepository.getById(SessionManager.getLoggedUserId(session));
             if (user.getUserId() != video.getUploaderId() && video.isPrivate()) {    //private & not user`s
                 throw new VideoNotFoundException();
             }
@@ -88,9 +89,9 @@ public class VideoController extends GlobalController {
         }
     }
 
-    private void addToWatchHistory(HttpSession session, Video video) throws NotLoggedException {
+    private void addToWatchHistory(HttpSession session, Video video) throws BadRequestException {
         if (SessionManager.isLogged(session)) {
-            User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+            User user = userRepository.getById(SessionManager.getLoggedUserId(session));
             if (!watchHistoryRepository.existsByVideoAndUser(video, user)) {
                 WatchHistory historyRecord = new WatchHistory(user, video);
                 watchHistoryRepository.save(historyRecord);
@@ -111,7 +112,7 @@ public class VideoController extends GlobalController {
 
         video.setNumberOfViews(video.getNumberOfViews() + 1);
         videoRepository.save(video);
-        return video.convertToViewVideoDTO(userRepository.getByUserId(video.getUploaderId()).getFullName());
+        return video.convertToViewVideoDTO(userRepository.getById(video.getUploaderId()).getFullName());
     }
 
     private List<Comment> getCommentsWithoutResponses(Video video) {
@@ -127,11 +128,11 @@ public class VideoController extends GlobalController {
 
         Video video = videoRepository.getByVideoId(videoId); // throws Video Not Found
         this.validatePrivateAccessToVideo(session, video);
-
-        return this.getCommentsWithoutResponses(video)
-                .stream()
-                .map(comment -> comment.convertToViewCommentDTO(userRepository.getByUserId(comment.getPublisherId()).getFullName()))
-                .collect(Collectors.toList());
+        List<ViewCommentDTO> comments = new ArrayList<>();
+        for (Comment response : getCommentsWithoutResponses(video)) {
+            comments.add(response.convertToViewCommentDTO(userRepository.getById(response.getPublisherId()).getFullName()));
+        }
+        return comments;
     }
 
     private List<Comment> filterComments(List<Comment> comments, String filter) throws InvalidInputException {
@@ -161,10 +162,11 @@ public class VideoController extends GlobalController {
         Video video = videoRepository.getByVideoId(videoId); // throws Video Not Found
         this.validatePrivateAccessToVideo(session, video);
 
-        return this.filterComments(this.getCommentsWithoutResponses(video), filter)
-                .stream()
-                .map(comment -> comment.convertToViewCommentDTO(userRepository.getByUserId(comment.getPublisherId()).getFullName()))
-                .collect(Collectors.toList());
+        List<ViewCommentDTO> comments = new ArrayList<>();
+        for (Comment response : filterComments(getCommentsWithoutResponses(video), filter)) {
+            comments.add(response.convertToViewCommentDTO(userRepository.getById(response.getPublisherId()).getFullName()));
+        }
+        return comments;
     }
 
     @GetMapping(value = "/{videoId}/play")
@@ -204,7 +206,7 @@ public class VideoController extends GlobalController {
         }
         video.setURL(this.amazonClient.uploadFile(file, video));
 
-        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         if (!video.isPrivate()) {
             this.notifySubscribers(user);
         }
@@ -216,7 +218,7 @@ public class VideoController extends GlobalController {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        User loggedUser = userRepository.getByUserId(SessionManager.getLoggedUserId(session));
+        User loggedUser = userRepository.getById(SessionManager.getLoggedUserId(session));
         this.validateVideo(video);
         this.setInitialVideoValues(video);
         video.setUploaderId(loggedUser.getUserId());
@@ -281,7 +283,7 @@ public class VideoController extends GlobalController {
             throw new NotLoggedException();
         }
         Video video = videoRepository.getByVideoId(videoId); // throws Video Not Found
-        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         if (user.getUserId() != video.getUploaderId() && video.isPrivate()) {    //private & not user`s
             throw new VideoNotFoundException();
         }
@@ -292,7 +294,7 @@ public class VideoController extends GlobalController {
             this.removeDislike(user, video);
         }
         this.addLike(user, video);
-        String uploaderName = userRepository.getByUserId(video.getUploaderId()).getFullName();
+        String uploaderName = userRepository.getById(video.getUploaderId()).getFullName();
         return video.convertToViewVideoDTO(uploaderName);
     }
 
@@ -303,7 +305,7 @@ public class VideoController extends GlobalController {
             throw new NotLoggedException();
         }
         Video video = videoRepository.getByVideoId(videoId); // throws Video Not Found
-        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         if (user.getUserId() != video.getUploaderId() && video.isPrivate()) {    //private & not user`s
             throw new VideoNotFoundException();
         }
@@ -314,7 +316,7 @@ public class VideoController extends GlobalController {
             this.removeLike(user, video);
         }
         this.addDislike(user, video);
-        String uploaderName = userRepository.getByUserId(video.getUploaderId()).getFullName();
+        String uploaderName = userRepository.getById(video.getUploaderId()).getFullName();
         return video.convertToViewVideoDTO(uploaderName);
     }
 
@@ -325,7 +327,7 @@ public class VideoController extends GlobalController {
             throw new NotLoggedException();
         }
         Video video = videoRepository.getByVideoId(videoId); // throws Video Not Found
-        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         if (user.getUserId() != video.getUploaderId() && video.isPrivate()) {    //private & not user`s
             throw new VideoNotFoundException();
         }
@@ -333,7 +335,7 @@ public class VideoController extends GlobalController {
             throw new BadRequestException(CANNOT_REMOVE_DISLIKE);
         }
         this.removeDislike(user, video);
-        String uploaderName = userRepository.getByUserId(video.getUploaderId()).getFullName();
+        String uploaderName = userRepository.getById(video.getUploaderId()).getFullName();
         return videoRepository.save(video).convertToViewVideoDTO(uploaderName);
     }
 
@@ -344,7 +346,7 @@ public class VideoController extends GlobalController {
             throw new NotLoggedException();
         }
         Video video = videoRepository.getByVideoId(videoId); // throws Video Not Found
-        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         if (user.getUserId() != video.getUploaderId() && video.isPrivate()) {    //private & not user`s
             throw new VideoNotFoundException();
         }
@@ -352,7 +354,7 @@ public class VideoController extends GlobalController {
             throw new BadRequestException(CANNOT_REMOVE_LIKE);
         }
         this.removeLike(user, video);
-        String uploaderName = userRepository.getByUserId(video.getUploaderId()).getFullName();
+        String uploaderName = userRepository.getById(video.getUploaderId()).getFullName();
         return videoRepository.save(video).convertToViewVideoDTO(uploaderName);
     }
 

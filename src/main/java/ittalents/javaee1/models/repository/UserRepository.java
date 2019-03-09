@@ -14,13 +14,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     User getByUsername(String username);
 
-    User getByUserId(long id);
-
     List<User> findAllByFullNameContaining(String searchWord);
-    
+
     default User getById(long id) throws UserNotFoundExeption {
         Optional<User> user = findById(id);
-        if(!user.isPresent()){
+        if (!user.isPresent()) {
             throw new UserNotFoundExeption();
         }
         return user.get();

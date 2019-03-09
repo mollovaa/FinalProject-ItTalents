@@ -7,11 +7,15 @@ import ittalents.javaee1.util.exceptions.NotLoggedException;
 import ittalents.javaee1.models.pojo.Notification;
 import ittalents.javaee1.models.pojo.User;
 import ittalents.javaee1.util.ResponseMessage;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
+import javax.swing.text.View;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,16 +26,28 @@ public class NotificationController extends GlobalController {
 
     private static final String SUCCESSFULLY_CLEARED_NOTIFICATIONS = "Successfully cleared notifications!";
 
+    @AllArgsConstructor
+    @Getter
+    class ViewNotificationDTO {
+        private long notificationId;
+        private String message;
+        private LocalDate date;
+    }
+
+    ViewNotificationDTO convertToViewNotificationDTO(Notification n) {
+        return new ViewNotificationDTO(n.getNotificationId(), n.getMessage(), n.getDate());
+    }
+
     @GetMapping(value = "/unread")     //only unread notifications
     public Object showUnreadNotifications(HttpSession session) throws BadRequestException {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
         User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
-        ArrayList<Notification> result = new ArrayList<>();
+        ArrayList<ViewNotificationDTO> result = new ArrayList<>();
         for (Notification n : user.getNotifications()) {
             if (!n.isRead()) {
-                result.add(n);
+                result.add(convertToViewNotificationDTO(n));
                 n.setRead(true);
                 notificationRepository.save(n);
             }
@@ -45,14 +61,15 @@ public class NotificationController extends GlobalController {
             throw new NotLoggedException();
         }
         User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
-        List<Notification> notifications = user.getNotifications();
-        for (Notification n : notifications) {
+        ArrayList<ViewNotificationDTO> result = new ArrayList<>();
+        for (Notification n : user.getNotifications()) {
             if (!n.isRead()) {
                 n.setRead(true);
                 notificationRepository.save(n);
+                result.add(convertToViewNotificationDTO(n));
             }
         }
-        return notifications;
+        return result;
     }
 
     @Transactional

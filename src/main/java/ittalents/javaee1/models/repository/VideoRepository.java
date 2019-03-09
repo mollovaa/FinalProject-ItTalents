@@ -9,15 +9,13 @@ import java.util.Optional;
 
 public interface VideoRepository extends JpaRepository<Video, Long> {
 
-   //Video getByVideoId(long videoId);
-
     List<Video> findAllByTitleContaining(String title);
 
     List<Video> findAllByTitleContainingAndDurationLessThanEqual(String title, long duration);
 
     List<Video> findAllByTitleContainingAndDurationGreaterThan(String title, long duration);
 
-    default Video getByVideoId(long videoId) throws VideoNotFoundException{
+    default Video getByVideoId(long videoId) throws VideoNotFoundException {
         Optional<Video> video = this.findById(videoId);
         if (!video.isPresent()) {
             throw new VideoNotFoundException();
