@@ -20,14 +20,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping(value = "/comments")
 public class CommentController extends GlobalController {
 
-    private static final String COMMENTED_VIDEO_BY = "Your video has been commented by ";
-    private static final String RESPOND_TO_COMMENT = " respond to your comment";
+    private static final String COMMENTED_VIDEO = " commented your video: ";
+    private static final String RESPOND_TO_COMMENT = " respond to your comment: ";
     private static final String SUCCESSFULLY_REMOVED_COMMENT = "Successfully removed comment!";
     private static final String ALREADY_DISLIKED_COMMENT = "Already disliked this comment!";
     private static final String INVALID_COMMENT_MESSAGE = "Invalid comment message!";
@@ -61,7 +60,8 @@ public class CommentController extends GlobalController {
         long uploaderId = video.getUploaderId();
         if (uploaderId != loggedUser.getUserId()) { //if owner comments -> no notification is send
             String writerName = loggedUser.getFullName();
-            Notification notif = new Notification(COMMENTED_VIDEO_BY + writerName, uploaderId);
+            Notification notif = new Notification(writerName + COMMENTED_VIDEO + "" + video.getTitle() + "",
+                    uploaderId);
             notificationRepository.save(notif);
         }
     }
@@ -93,7 +93,8 @@ public class CommentController extends GlobalController {
         long commentOwnerId = comment.getPublisherId();
         if (commentOwnerId != loggedUser.getUserId()) {  //if owner responses to owned comment
             String writerName = loggedUser.getFullName();
-            Notification notif = new Notification(writerName + RESPOND_TO_COMMENT, commentOwnerId);
+            Notification notif = new Notification(writerName + RESPOND_TO_COMMENT + "" + comment.getMessage() + "",
+                    commentOwnerId);
             notificationRepository.save(notif);
         }
     }

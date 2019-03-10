@@ -43,7 +43,7 @@ public class NotificationController extends GlobalController {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         ArrayList<ViewNotificationDTO> result = new ArrayList<>();
         for (Notification n : user.getNotifications()) {
             if (!n.isRead()) {
@@ -60,13 +60,13 @@ public class NotificationController extends GlobalController {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         ArrayList<ViewNotificationDTO> result = new ArrayList<>();
         for (Notification n : user.getNotifications()) {
+            result.add(convertToViewNotificationDTO(n));
             if (!n.isRead()) {
                 n.setRead(true);
                 notificationRepository.save(n);
-                result.add(convertToViewNotificationDTO(n));
             }
         }
         return result;
@@ -78,7 +78,7 @@ public class NotificationController extends GlobalController {
         if (!SessionManager.isLogged(session)) {
             throw new NotLoggedException();
         }
-        User user = userRepository.findById(SessionManager.getLoggedUserId(session)).get();
+        User user = userRepository.getById(SessionManager.getLoggedUserId(session));
         List<Notification> notifications = user.getNotifications();
         for (Notification n : notifications) {
             notificationRepository.delete(n);
